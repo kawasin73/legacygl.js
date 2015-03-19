@@ -26,8 +26,8 @@ function get_shader(gl, vertex_shader_src, fragment_shader_src) {
     shader.uniforms = {};
     shader.add_uniform = function(name, type) {
         this.uniforms[name] = {};
-        this.uniforms[name].type = type;
         this.uniforms[name].location = gl.getUniformLocation(this.program, "u_" + name);
+        this.uniforms[name].type = type;
         this.uniforms[name].value =
             type == "1f" || type == "1i" ? 0 :
             type == "2f" || type == "2i" ? vec2.create() :
@@ -37,6 +37,14 @@ function get_shader(gl, vertex_shader_src, fragment_shader_src) {
             type == "Matrix3f" ? mat3.create() :
             type == "Matrix4f" ? mat4.create() :
             undefined;
+        this.uniforms[name].stack = [];
+        this.uniforms[name].push = function(){
+            this.stack.push(this.value);
+        };
+        this.uniforms[name].pop = function(){
+            this.stack.pop();
+            this.value = this.stack[this.stack.length - 1];
+        };
     };
     shader.set_uniforms = function() {
         for (var name in this.uniforms) {
@@ -44,11 +52,11 @@ function get_shader(gl, vertex_shader_src, fragment_shader_src) {
             var func_name = "uniform" + type;
             if (type != "1f" && type != "1i")
                 func_name += "v";
-            if (type == "Matrix2f" || type == "Matrix3f" || type == "Matrix4f")
+            if (type == "Matrix2f" || type == "Matrix3f" || type == "Matrix4f") {
                 gl[func_name](this.uniforms[name].location, false, this.uniforms[name].value);
-            else {
-                gl[func_name](this.uniforms[name].location, this.uniforms[name].value);
             }
+            else
+                gl[func_name](this.uniforms[name].location, this.uniforms[name].value);
         }
     };
     return shader;
