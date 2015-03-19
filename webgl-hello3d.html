@@ -11,11 +11,13 @@
     var legacygl = {};
     
     function draw() {
+        shader.uniforms.hoge.value = 0.5;
+        shader.set_uniforms();
         legacygl.draw(function(){
             legacygl.begin(gl.TRIANGLES);
             legacygl.color(1, 0, 0);
             legacygl.vertex2(1, 0);
-            legacygl.color(0, 1, 0);   
+            legacygl.color(0, 1, 0);
             legacygl.vertex2(0, 1);
             legacygl.color(0, 0, 1);   
             legacygl.vertex2(0, 0);
@@ -41,11 +43,13 @@
         var fragment_shader_src = "\
             precision mediump float;\
             varying vec3 v_color;\
+            uniform float u_hoge;\
             void main(void) {\
-                gl_FragColor = vec4(v_color, 1.0);\
+                gl_FragColor = vec4(v_color * u_hoge, 1.0);\
             }\
             ";
         shader = get_shader(gl, vertex_shader_src, fragment_shader_src);
+        shader.add_uniform("hoge", "1f");
 
         legacygl = get_legacygl(gl, shader.program);
         legacygl.add_vertex_attribute("color", 3);

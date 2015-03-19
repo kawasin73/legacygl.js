@@ -22,6 +22,35 @@ function get_shader(gl, vertex_shader_src, fragment_shader_src) {
     gl.useProgram(shader.program);
     if (!gl.getProgramParameter(shader.program, gl.LINK_STATUS))
         alert("Could not initialise shaders");
+    // utility for uniforms
+    shader.uniforms = {};
+    shader.add_uniform = function(name, type) {
+        this.uniforms[name] = {};
+        this.uniforms[name].type = type;
+        this.uniforms[name].location = gl.getUniformLocation(this.program, "u_" + name);
+        this.uniforms[name].value =
+            type == "1f" || type == "1i" ? 0 :
+            type == "2f" || type == "2i" ? vec2.create() :
+            type == "3f" || type == "3i" ? vec3.create() :
+            type == "4f" || type == "4i" ? vec4.create() :
+            type == "Matrix2f" ? mat2.create() :
+            type == "Matrix3f" ? mat3.create() :
+            type == "Matrix4f" ? mat4.create() :
+            undefined;
+    };
+    shader.set_uniforms = function() {
+        for (var name in this.uniforms) {
+            var type = this.uniforms[name].type;
+            var func_name = "uniform" + type;
+            if (type != "1f" && type != "1i")
+                func_name += "v";
+            if (type == "Matrix2f" || type == "Matrix3f" || type == "Matrix4f")
+                gl[func_name](this.uniforms[name].location, false, this.uniforms[name].value);
+            else {
+                gl[func_name](this.uniforms[name].location, this.uniforms[name].value);
+            }
+        }
+    };
     return shader;
 };
 
@@ -62,12 +91,6 @@ function get_legacygl(gl, shader_program) {
     };
     legacygl.vertex2 = function(x, y) {
         this.vertex3(x, y, 0);
-    };
-    // uniforms
-    legacygl.uniforms = {};
-    legacygl.add_uniform = function(name, type) {
-        var uniform = {};
-
     };
     // begin and end
     legacygl.begin = function(mode) {
