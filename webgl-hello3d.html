@@ -12,6 +12,7 @@
     var displist = {};
     
     function draw() {
+        mat4.ortho2d(shader.uniforms.projection.value, 0, canvas.width, 0, canvas.height);
         displist.set_drawfunc(function(){
             displist.begin(gl.TRIANGLES);
             displist.color(1, 0, 0);
@@ -22,14 +23,15 @@
             displist.vertex2(0, 0);
             displist.end();
         });
+        var modelview = shader.uniforms.modelview.value;
+        mat4.scale_ip(modelview, [100, 200, 1]);
         shader.uniforms.modelview.push();
-        console.log("hoge");
-        mat4.translate_ip(shader.uniforms.modelview.value, [0.2, 0.3, 0]);
+        mat4.translate_ip(modelview, [0.2, 0.3, 0]);
         shader.set_uniforms();
         displist.draw();
         shader.uniforms.modelview.pop();
         shader.uniforms.modelview.push();
-        mat4.translate_ip(shader.uniforms.modelview.value, [-0.3, -0.5, 0]);
+        mat4.translate_ip(modelview, [-0.5, 1, 0]);
         shader.set_uniforms();
         displist.draw();
         shader.uniforms.modelview.pop();
