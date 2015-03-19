@@ -8,20 +8,20 @@
     var gl;
     var canvas;
     var shader = {};
-    var legacygl = {};
+    var displist = {};
     
     function draw() {
         shader.uniforms.hoge.value = 0.5;
         shader.set_uniforms();
-        legacygl.draw(function(){
-            legacygl.begin(gl.TRIANGLES);
-            legacygl.color(1, 0, 0);
-            legacygl.vertex2(1, 0);
-            legacygl.color(0, 1, 0);
-            legacygl.vertex2(0, 1);
-            legacygl.color(0, 0, 1);   
-            legacygl.vertex2(0, 0);
-            legacygl.end();
+        displist.draw(function(){
+            displist.begin(gl.TRIANGLES);
+            displist.color(1, 0, 0);
+            displist.vertex2(1, 0);
+            displist.color(0, 1, 0);
+            displist.vertex2(0, 1);
+            displist.color(0, 0, 1);   
+            displist.vertex2(0, 0);
+            displist.end();
         });
     }
     function init() {
@@ -51,8 +51,8 @@
         shader = get_shader(gl, vertex_shader_src, fragment_shader_src);
         shader.add_uniform("hoge", "1f");
 
-        legacygl = get_legacygl(gl, shader.program);
-        legacygl.add_vertex_attribute("color", 3);
+        displist = get_displist(gl, shader.program);
+        displist.add_vertex_attribute("color", 3);
     }
 </script>
 

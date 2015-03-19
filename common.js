@@ -54,13 +54,13 @@ function get_shader(gl, vertex_shader_src, fragment_shader_src) {
     return shader;
 };
 
-function get_legacygl(gl, shader_program) {
-    var legacygl = {};
-    legacygl.is_valid = false;
+function get_displist(gl, shader_program) {
+    var displist = {};
+    displist.is_valid = false;
     
     // vertex attributes
-    legacygl.vertex_attributes = {};
-    legacygl.add_vertex_attribute = function(name, size) {
+    displist.vertex_attributes = {};
+    displist.add_vertex_attribute = function(name, size) {
         this.vertex_attributes[name] = {};
         this.vertex_attributes[name].size = size;
         // array and buffer
@@ -79,34 +79,34 @@ function get_legacygl(gl, shader_program) {
         };
     };
     // special treatment for position attribute
-    legacygl.add_vertex_attribute("position", 3);
-    delete legacygl.position;
-    delete legacygl.vertex_attributes.position.current;
-    legacygl.vertex3 = function(x, y, z) {
+    displist.add_vertex_attribute("position", 3);
+    delete displist.position;
+    delete displist.vertex_attributes.position.current;
+    displist.vertex3 = function(x, y, z) {
         for (var name in this.vertex_attributes) {
             var push_value = name == "position" ? [x, y, z] : this.vertex_attributes[name].current;
             for (var i = 0; i < this.vertex_attributes[name].size; ++i)
                 this.vertex_attributes[name].array.push(push_value[i]);
         }
     };
-    legacygl.vertex2 = function(x, y) {
+    displist.vertex2 = function(x, y) {
         this.vertex3(x, y, 0);
     };
     // begin and end
-    legacygl.begin = function(mode) {
+    displist.begin = function(mode) {
         this.mode = mode;
         // clear array
         for (var name in this.vertex_attributes)
             this.vertex_attributes[name].array = [];
     };
-    legacygl.end = function() {
+    displist.end = function() {
         for (var name in this.vertex_attributes) {
             gl.bindBuffer(gl.ARRAY_BUFFER, this.vertex_attributes[name].buffer);
             gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.vertex_attributes[name].array), gl.STATIC_DRAW);
         }
     };
     // draw call with displaylist-like mechanism
-    legacygl.draw = function(draw_func) {
+    displist.draw = function(draw_func) {
         if (!this.is_valid) {
             draw_func();
             this.is_valid = true;
@@ -117,8 +117,8 @@ function get_legacygl(gl, shader_program) {
         }
         gl.drawArrays(this.mode, 0, this.vertex_attributes.position.array.length / 3);
     };
-    legacygl.invalidate = function() {
+    displist.invalidate = function() {
         this.is_valid = false;
     };
-    return legacygl;
+    return displist;
 }
