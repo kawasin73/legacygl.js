@@ -12,9 +12,7 @@
     var displist = {};
     
     function draw() {
-        mat4.translate_ip(shader.uniforms.modelview.value, [0.2, 0.3, 0]);
-        shader.set_uniforms();
-        displist.draw(function(){
+        displist.set_drawfunc(function(){
             displist.begin(gl.TRIANGLES);
             displist.color(1, 0, 0);
             displist.vertex2(1, 0);
@@ -24,6 +22,17 @@
             displist.vertex2(0, 0);
             displist.end();
         });
+        shader.uniforms.modelview.push();
+        console.log("hoge");
+        mat4.translate_ip(shader.uniforms.modelview.value, [0.2, 0.3, 0]);
+        shader.set_uniforms();
+        displist.draw();
+        shader.uniforms.modelview.pop();
+        shader.uniforms.modelview.push();
+        mat4.translate_ip(shader.uniforms.modelview.value, [-0.3, -0.5, 0]);
+        shader.set_uniforms();
+        displist.draw();
+        shader.uniforms.modelview.pop();
     }
     function init() {
         canvas = document.getElementById("canvas");
@@ -53,7 +62,7 @@
         shader = get_shader(gl, vertex_shader_src, fragment_shader_src);
         shader.add_uniform("modelview", "Matrix4f");
         shader.add_uniform("projection", "Matrix4f");
-        
+
         displist = get_displist(gl, shader.program);
         displist.add_vertex_attribute("color", 3);
     }

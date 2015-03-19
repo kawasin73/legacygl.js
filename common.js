@@ -42,8 +42,8 @@ function get_shader(gl, vertex_shader_src, fragment_shader_src) {
             this.stack.push(this.value);
         };
         this.uniforms[name].pop = function(){
-            this.stack.pop();
             this.value = this.stack[this.stack.length - 1];
+            this.stack.pop();
         };
     };
     shader.set_uniforms = function() {
@@ -64,7 +64,6 @@ function get_shader(gl, vertex_shader_src, fragment_shader_src) {
 
 function get_displist(gl, shader_program) {
     var displist = {};
-    displist.is_valid = false;
     
     // vertex attributes
     displist.vertex_attributes = {};
@@ -114,9 +113,13 @@ function get_displist(gl, shader_program) {
         }
     };
     // draw call with displaylist-like mechanism
-    displist.draw = function(draw_func) {
+    displist.set_drawfunc = function(drawfunc) {
+        this.drawfunc = drawfunc;
+        this.is_valid = false;
+    };
+    displist.draw = function() {
         if (!this.is_valid) {
-            draw_func();
+            this.drawfunc();
             this.is_valid = true;
         }
         for (var name in this.vertex_attributes) {
