@@ -24,14 +24,10 @@
                 [0, 0.7, 1],
                 [0, 0, 0]);
         };
-        modelview.push();    mat4.translate_ip(modelview.value, [-1, -1, -1]);    draw_cube();    modelview.pop();
-        modelview.push();    mat4.translate_ip(modelview.value, [ 1, -1, -1]);    draw_cube();    modelview.pop();
-        modelview.push();    mat4.translate_ip(modelview.value, [-1,  1, -1]);    draw_cube();    modelview.pop();
-        modelview.push();    mat4.translate_ip(modelview.value, [ 1,  1, -1]);    draw_cube();    modelview.pop();
-        modelview.push();    mat4.translate_ip(modelview.value, [-1, -1,  1]);    draw_cube();    modelview.pop();
-        modelview.push();    mat4.translate_ip(modelview.value, [ 1, -1,  1]);    draw_cube();    modelview.pop();
-        modelview.push();    mat4.translate_ip(modelview.value, [-1,  1,  1]);    draw_cube();    modelview.pop();
-        modelview.push();    mat4.translate_ip(modelview.value, [ 1,  1,  1]);    draw_cube();    modelview.pop();
+        modelview.push();
+        mat4.translate_ip(modelview.value, [1, 1, 1]);
+        draw_cube();
+        modelview.pop();
         shader.set_uniforms();
         legacygl.begin(gl.LINES);
         // grid on xz plane
@@ -56,6 +52,7 @@
                 evt.shiftKey ? "zoom" : evt.ctrlKey ? "pan" : "rotate");
             return;
         }
+        console.log(evt.clientX, canvas.height - evt.clientY);
     };
     function onmousemove(evt) {
         if (camera.is_moving()) {
@@ -67,6 +64,8 @@
     function onmouseup(evt) {
         if (camera.is_moving()) {
             camera.finish_moving();
+            var win_xyz = project([1, 1, 1], shader.uniforms.modelview.value, shader.uniforms.projection.value, [0, 0, canvas.width, canvas.height]);
+            console.log(win_xyz);
             return;
         }
     }
@@ -99,7 +98,7 @@
         shader = get_shader(gl, vertex_shader_src, fragment_shader_src);
         shader.add_uniform("modelview", "Matrix4f");
         shader.add_uniform("projection", "Matrix4f");
-        mat4.perspective(shader.uniforms.projection.value, 0.5, canvas.width / canvas.height, 0.1, 100);
+        mat4.perspective(shader.uniforms.projection.value, 30 * Math.PI / 180, canvas.width / canvas.height, 0.1, 100);
         // utilities
         legacygl = get_legacygl(gl, shader.program);
         legacygl.add_vertex_attribute("color", 3);

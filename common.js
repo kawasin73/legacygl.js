@@ -1,5 +1,19 @@
 "use strict";
 
+function project(obj_xyz, modelview, projection, viewport) {
+    var m = mat4.mul([], projection, modelview);
+    var v = vec4.transformMat4([], [obj_xyz[0], obj_xyz[1], obj_xyz[2], 1], m);
+    // normalized decive coordinate
+    v[0] /= v[3];
+    v[1] /= v[3];
+    v[2] /= v[3];
+    // viewport coordinate
+    var win_x = (v[0] + 1) * viewport[2] / 2 + viewport[0];
+    var win_y = (v[1] + 1) * viewport[3] / 2 + viewport[1];
+    var win_z = (v[2] + 1) / 2;
+    return [win_x, win_y, win_z];
+};
+
 function get_drawutil(gl, legacygl) {
     var drawutil = {};
     drawutil.fill_and_line = function(drawfunc, fill_color, line_color) {
