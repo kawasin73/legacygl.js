@@ -16,6 +16,43 @@ function project(obj_xyz, modelview, projection, viewport) {
 
 function get_drawutil(gl, legacygl) {
     var drawutil = {};
+    drawutil.xyzaxis = function() {
+        legacygl.begin(gl.LINES);
+        legacygl.color(1, 0, 0);    legacygl.vertex(0, 0, 0);    legacygl.vertex(1, 0, 0);
+        legacygl.color(0, 1, 0);    legacygl.vertex(0, 0, 0);    legacygl.vertex(0, 1, 0);
+        legacygl.color(0, 0, 1);    legacygl.vertex(0, 0, 0);    legacygl.vertex(0, 0, 1);
+        legacygl.end();
+    };
+    drawutil.xygrid = function(size) {
+        legacygl.begin(gl.LINES);
+        for (var i = -size; i <= size; ++i) {
+            legacygl.vertex(i, -size, 0);
+            legacygl.vertex(i,  size, 0);
+            legacygl.vertex(-size, i, 0);
+            legacygl.vertex( size, i, 0);
+        }
+        legacygl.end();
+    };
+    drawutil.yzgrid = function(size) {
+        legacygl.begin(gl.LINES);
+        for (var i = -size; i <= size; ++i) {
+            legacygl.vertex(0, i, -size);
+            legacygl.vertex(0, i,  size);
+            legacygl.vertex(0, -size, i);
+            legacygl.vertex(0,  size, i);
+        }
+        legacygl.end();
+    };
+    drawutil.zxgrid = function(size) {
+        legacygl.begin(gl.LINES);
+        for (var i = -size; i <= size; ++i) {
+            legacygl.vertex(i, 0, -size);
+            legacygl.vertex(i, 0,  size);
+            legacygl.vertex(-size, 0, i);
+            legacygl.vertex( size, 0, i);
+        }
+        legacygl.end();
+    };
     drawutil.fill_and_line = function(drawfunc, fill_color, line_color) {
         gl.enable(gl.POLYGON_OFFSET_FILL);
         legacygl.color(fill_color[0], fill_color[1], fill_color[2]);

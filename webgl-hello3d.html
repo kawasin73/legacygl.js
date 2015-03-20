@@ -12,38 +12,28 @@
     var legacygl;
     var drawutil;
     var camera;
+    var objects;
     
     function draw() {
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         var modelview = shader.uniforms.modelview;
         camera.lookAt(modelview.value);
-        function draw_cube() {
+        // zx-grid and xyz axis
+        shader.set_uniforms();
+        drawutil.zxgrid(10);
+        drawutil.xyzaxis();
+        // objects
+        for (var i = 0; i < objects.length; ++i) {
+            modelview.push();
+            mat4.translate_ip(modelview.value, objects[i].position);
+            mat4.scale_ip(modelview.value, [objects[i].scale, objects[i].scale, objects[i].scale]);
             shader.set_uniforms();
             drawutil.fill_and_line(
                 function(mode) { drawutil.cube(mode, 0.1); },
-                [0, 0.7, 1],
+                objects[i].selected ? [1, 0, 0] : [0, 0.7, 1],
                 [0, 0, 0]);
-        };
-        modelview.push();
-        mat4.translate_ip(modelview.value, [1, 1, 1]);
-        draw_cube();
-        modelview.pop();
-        shader.set_uniforms();
-        legacygl.begin(gl.LINES);
-        // grid on xz plane
-        legacygl.color(0.2, 0.2, 0.2);
-        var grid_size = 10;
-        for (var i = -grid_size; i <= grid_size; ++i) {
-            legacygl.vertex(i, 0, -grid_size);
-            legacygl.vertex(i, 0,  grid_size);
-            legacygl.vertex(-grid_size, 0, i);
-            legacygl.vertex( grid_size, 0, i);
+            modelview.pop();
         }
-        // xyz axis
-        legacygl.color(1, 0, 0);    legacygl.vertex(0, 0, 0);    legacygl.vertex(1, 0, 0);
-        legacygl.color(0, 1, 0);    legacygl.vertex(0, 0, 0);    legacygl.vertex(0, 1, 0);
-        legacygl.color(0, 0, 1);    legacygl.vertex(0, 0, 0);    legacygl.vertex(0, 0, 1);
-        legacygl.end();
     };
     function onmousedown(evt) {
         if (evt.altKey) {
@@ -52,7 +42,22 @@
                 evt.shiftKey ? "zoom" : evt.ctrlKey ? "pan" : "rotate");
             return;
         }
-        console.log(evt.clientX, canvas.height - evt.clientY);
+        // pick nearest object
+        var candidates = [];
+        for (var i = 0; i < objects.length; ++i) {
+            var modelview = shader.uniforms.modelview.value;
+            var projection = shader.uniforms.projection.value;
+            var viewport = [0, 0, canvas.width, canvas.height];
+            var win_xyz = project(objects[i].position, modelview, projection, viewport);
+            if (vec2.dist([evt.clientX, canvas.height - evt.clientY], [win_xyz[0], win_xyz[1]]) < 30)
+                candidates.push({ dist: vec3.dist(camera.eye, objects[i].position), index: i });
+            objects[i].selected = false;
+        }
+        if (candidates.length > 0) {
+            candidates.sort();
+            objects[candidates[0].index].selected = true;
+        }
+        draw();
     };
     function onmousemove(evt) {
         if (camera.is_moving()) {
@@ -64,8 +69,6 @@
     function onmouseup(evt) {
         if (camera.is_moving()) {
             camera.finish_moving();
-            var win_xyz = project([1, 1, 1], shader.uniforms.modelview.value, shader.uniforms.projection.value, [0, 0, canvas.width, canvas.height]);
-            console.log(win_xyz);
             return;
         }
     }
@@ -105,7 +108,12 @@
         drawutil = get_drawutil(gl, legacygl);
         // app data
         camera = get_camera(canvas.width, canvas.height);
-        camera.eye = [0.2, 0.5, 5];
+        camera.eye = [0.2, 0.5, 8];
+        objects = [
+            {position: [1, 2, 3], scale: 1.0, selected: false},
+            {position: [-1, 1, 2], scale: 1.2, selected: false},
+            {position: [2, -1, -1], scale: 0.7, selected: false}
+        ];
         // event handlers
         canvas.onmousedown = onmousedown;
         document.onmousemove = onmousemove;
