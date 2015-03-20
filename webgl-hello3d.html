@@ -4,7 +4,7 @@
 <title>WebGL Hello World (3D)</title>
 <script src="jquery-1.11.2.min.js"></script>
 <script src="gl-matrix.js"></script>
-<script src="gl-matrix-inplace.js"></script>
+<script src="gl-matrix-util.js"></script>
 <script src="common.js"></script>
 <script type="text/javascript">
     var gl;
@@ -14,7 +14,10 @@
     var drawutil;
     var camera;
     var objects;
-    var selected_object = -1;
+    var selected_index = -1;
+    var is_translating = false;
+    var plane_origin;
+    var plane_normal;
     
     function draw() {
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -32,7 +35,7 @@
             shader.set_uniforms();
             drawutil.fill_and_line(
                 function(mode) { drawutil.cube(mode, 0.1); },
-                i == selected_object ? [1, 0, 0] : [0, 0.7, 1],
+                i == selected_index ? [1, 0, 0] : [0, 0.7, 1],
                 [0, 0, 0]);
             modelview.pop();
         }
@@ -45,21 +48,25 @@
             return;
         }
         // pick nearest object
-        selected_object = -1;
+        selected_index = -1;
         var candidates = [];
+        var mouse_win = [evt.clientX, canvas.height - evt.clientY];   // mouse position in window coordinate
+        var modelview = shader.uniforms.modelview.value;
+        var projection = shader.uniforms.projection.value;
+        var viewport = [0, 0, canvas.width, canvas.height];
         for (var i = 0; i < objects.length; ++i) {
-            var modelview = shader.uniforms.modelview.value;
-            var projection = shader.uniforms.projection.value;
-            var viewport = [0, 0, canvas.width, canvas.height];
-            var win_xyz = project(objects[i].position, modelview, projection, viewport);
-            if (vec2.dist([evt.clientX, canvas.height - evt.clientY], [win_xyz[0], win_xyz[1]]) < 20)
+            var object_win = project(objects[i].position, modelview, projection, viewport);     // object's position in window coordinate
+            if (vec2.dist(mouse_win, object_win) < 20)
                 candidates.push({ dist: vec3.dist(camera.eye, objects[i].position), index:i });
         }
         if (candidates.length > 0) {
             candidates.sort(function(a, b){return a.dist - b.dist});
-            selected_object = candidates[0].index;
+            selected_index = candidates[0].index;
+            plane_origin = objects[selected_index].position;
+            plane_normal = vec3.normalize_ip(camera.eye_to_center());
+            is_translating = true;
         }
-        document.getElementById("input1").value = selected_object == -1 ? "(no object selected)" : objects[selected_object].scale;
+        document.getElementById("input1").value = selected_index == -1 ? null : objects[selected_index].scale;
         draw();
     };
     function onmousemove(evt) {
@@ -68,23 +75,37 @@
             draw();
             return;
         }
+        if (is_translating) {
+            var modelview = shader.uniforms.modelview.value;
+            var projection = shader.uniforms.projection.value;
+            var viewport = [0, 0, canvas.width, canvas.height];
+            var mouse_win = [evt.clientX, canvas.height - evt.clientY, 1];   // mouse position in window coordinate
+            var mouse_obj = unproject(mouse_win, modelview, projection, viewport);  // unprojection of mouse position in 3D
+            var eye_to_mouse = vec3.sub([], mouse_obj, camera.eye);
+            var eye_to_origin = vec3.sub([], plane_origin, camera.eye);
+            var s1 = vec3.dot(eye_to_mouse, plane_normal);
+            var s2 = vec3.dot(eye_to_origin, plane_normal);
+            var eye_to_intersection = vec3.scale([], eye_to_mouse, s2 / s1);
+            objects[selected_index].position = vec3.add([], camera.eye, eye_to_intersection);;
+            draw();
+        }
     }
     function onmouseup(evt) {
         if (camera.is_moving()) {
             camera.finish_moving();
             return;
         }
+        is_translating = false;
     }
     function input1_onchange(evt) {
-        if (selected_object == -1)
+        if (selected_index == -1)
             return;
-        objects[selected_object].scale = evt.target.value;
+        objects[selected_index].scale = evt.target.value;
         draw();
     }
     function init() {
         // OpenGL context
         canvas = document.getElementById("canvas");
-        input1 = document.getElementById("input1");
         gl = canvas.getContext("webgl");
         if (!gl)
             alert("Could not initialise WebGL, sorry :-(");
