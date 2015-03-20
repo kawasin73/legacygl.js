@@ -9,23 +9,45 @@
     var gl;
     var canvas;
     var shader;
-    var displist;
+    var legacygl;
+    var drawutil;
     var camera;
     
     function draw() {
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         var modelview = shader.uniforms.modelview;
-        var projection = shader.uniforms.projection;
-        mat4.perspective(projection.value, 0.5, canvas.width / canvas.height, 0.1, 100);
         camera.lookAt(modelview.value);
+        function draw_cube() {
+            shader.set_uniforms();
+            drawutil.fill_and_line(
+                function(mode) { drawutil.cube(mode, 0.1); },
+                [0, 0.7, 1],
+                [0, 0, 0]);
+        };
+        modelview.push();    mat4.translate_ip(modelview.value, [-1, -1, -1]);    draw_cube();    modelview.pop();
+        modelview.push();    mat4.translate_ip(modelview.value, [ 1, -1, -1]);    draw_cube();    modelview.pop();
+        modelview.push();    mat4.translate_ip(modelview.value, [-1,  1, -1]);    draw_cube();    modelview.pop();
+        modelview.push();    mat4.translate_ip(modelview.value, [ 1,  1, -1]);    draw_cube();    modelview.pop();
+        modelview.push();    mat4.translate_ip(modelview.value, [-1, -1,  1]);    draw_cube();    modelview.pop();
+        modelview.push();    mat4.translate_ip(modelview.value, [ 1, -1,  1]);    draw_cube();    modelview.pop();
+        modelview.push();    mat4.translate_ip(modelview.value, [-1,  1,  1]);    draw_cube();    modelview.pop();
+        modelview.push();    mat4.translate_ip(modelview.value, [ 1,  1,  1]);    draw_cube();    modelview.pop();
         shader.set_uniforms();
-        displist.set_drawfunc(function(){
-            displist.begin(gl.LINES);
-            displist.color(1, 0, 0); displist.vertex3(0, 0, 0); displist.vertex3(1, 0, 0);
-            displist.color(0, 1, 0); displist.vertex3(0, 0, 0); displist.vertex3(0, 1, 0);
-            displist.color(0, 0, 1); displist.vertex3(0, 0, 0); displist.vertex3(0, 0, 1);
-            displist.end();
-        });
-        displist.draw();
+        legacygl.begin(gl.LINES);
+        // grid on xz plane
+        legacygl.color(0.2, 0.2, 0.2);
+        var grid_size = 10;
+        for (var i = -grid_size; i <= grid_size; ++i) {
+            legacygl.vertex(i, 0, -grid_size);
+            legacygl.vertex(i, 0,  grid_size);
+            legacygl.vertex(-grid_size, 0, i);
+            legacygl.vertex( grid_size, 0, i);
+        }
+        // xyz axis
+        legacygl.color(1, 0, 0);    legacygl.vertex(0, 0, 0);    legacygl.vertex(1, 0, 0);
+        legacygl.color(0, 1, 0);    legacygl.vertex(0, 0, 0);    legacygl.vertex(0, 1, 0);
+        legacygl.color(0, 0, 1);    legacygl.vertex(0, 0, 0);    legacygl.vertex(0, 0, 1);
+        legacygl.end();
     };
     function onmousedown(evt) {
         if (evt.altKey) {
@@ -49,15 +71,12 @@
         }
     }
     function init() {
+        // OpenGL context
         canvas = document.getElementById("canvas");
-        canvas.onmousedown = onmousedown;
-        canvas.onmousemove = onmousemove;
-        canvas.onmouseup = onmouseup;
         gl = canvas.getContext("experimental-webgl");
-        gl.viewportWidth = canvas.width;
-        gl.viewportHeight = canvas.height;
         if (!gl)
             alert("Could not initialise WebGL, sorry :-(");
+        // set shader
         var vertex_shader_src = "\
             attribute vec3 a_position;\
             attribute vec3 a_color;\
@@ -66,6 +85,7 @@
             uniform mat4 u_projection;\
             void main(void) {\
                 gl_Position = u_projection * u_modelview * vec4(a_position, 1.0);\
+                gl_PointSize = 5.0;\
                 v_color = a_color;\
             }\
             ";
@@ -79,11 +99,22 @@
         shader = get_shader(gl, vertex_shader_src, fragment_shader_src);
         shader.add_uniform("modelview", "Matrix4f");
         shader.add_uniform("projection", "Matrix4f");
-
-        displist = get_displist(gl, shader.program);
-        displist.add_vertex_attribute("color", 3);
-
+        mat4.perspective(shader.uniforms.projection.value, 0.5, canvas.width / canvas.height, 0.1, 100);
+        // utilities
+        legacygl = get_legacygl(gl, shader.program);
+        legacygl.add_vertex_attribute("color", 3);
+        drawutil = get_drawutil(gl, legacygl);
+        // app data
         camera = get_camera(canvas.width, canvas.height);
+        camera.eye = [0.2, 0.5, 5];
+        // event handlers
+        canvas.onmousedown = onmousedown;
+        document.onmousemove = onmousemove;
+        document.onmouseup = onmouseup;
+        // init OpenGL settings
+        gl.viewport(0, 0, canvas.width, canvas.height);
+        gl.enable(gl.DEPTH_TEST);
+        gl.polygonOffset(1, 1);
     };
 </script>
 

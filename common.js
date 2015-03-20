@@ -1,5 +1,60 @@
 "use strict";
 
+function get_drawutil(gl, legacygl) {
+    var drawutil = {};
+    drawutil.fill_and_line = function(drawfunc, fill_color, line_color) {
+        gl.enable(gl.POLYGON_OFFSET_FILL);
+        legacygl.color(fill_color[0], fill_color[1], fill_color[2]);
+        drawfunc("fill");
+        gl.disable(gl.POLYGON_OFFSET_FILL);
+        legacygl.color(line_color[0], line_color[1], line_color[2]);
+        drawfunc("line");
+    };
+    drawutil.trimesh = function(mode, vertices, faces) {
+        legacygl.begin(gl[mode == "line" ? "LINES" : "TRIANGLES"]);
+        for (var f = 0; f < faces.length / 3; ++f) {
+            for (var i = 0; i < 3; ++i) {
+                var v0 = faces[3 * f + i];
+                var x0 = vertices[3 * v0];
+                var y0 = vertices[3 * v0 + 1];
+                var z0 = vertices[3 * v0 + 2];
+                legacygl.vertex(x0, y0, z0);
+                if (mode == "line") {
+                    var v1 = faces[3 * f + (i + 1) % 3];
+                    var x1 = vertices[3 * v1];
+                    var y1 = vertices[3 * v1 + 1];
+                    var z1 = vertices[3 * v1 + 2];
+                    legacygl.vertex(x1, y1, z1);
+                }
+            }
+        }
+        legacygl.end();
+    };
+    drawutil.cube = function(mode, size) {
+        var r = size / 2;
+        this.trimesh(mode, 
+            [ // vertices
+            -r, -r, -r,
+             r, -r, -r,
+            -r,  r, -r,
+             r,  r, -r,
+            -r, -r,  r,
+             r, -r,  r,
+            -r,  r,  r,
+             r,  r,  r
+            ], [ // faces
+            1, 3, 7, 7, 5, 1, // positive-x
+            3, 2, 6, 6, 7, 3, // positive-y
+            2, 0, 4, 4, 6, 2, // negative-x
+            0, 1, 5, 5, 4, 0, // negative-y
+            4, 5, 7, 7, 6, 4, // positive-z
+            0, 2, 3, 3, 1, 0  // negative-z
+            ]
+        );
+    };
+    return drawutil;
+};
+
 function get_camera(viewport_width, viewport_height) {
     var camera = {};
     camera.eye = [0, 0, 1];
@@ -95,10 +150,28 @@ function get_shader(gl, vertex_shader_src, fragment_shader_src) {
             undefined;
         this.uniforms[name].stack = [];
         this.uniforms[name].push = function(){
-            this.stack.push(this.value);
+            var copy =
+                type == "1f" || type == "1i" ? this.value :
+                type == "2f" || type == "2i" ? vec2.copy([], this.value) :
+                type == "3f" || type == "3i" ? vec3.copy([], this.value) :
+                type == "4f" || type == "4i" ? vec4.copy([], this.value) :
+                type == "Matrix2f" ? mat2.copy([], this.value) :
+                type == "Matrix3f" ? mat3.copy([], this.value) :
+                type == "Matrix4f" ? mat4.copy([], this.value) :
+                undefined;
+            this.stack.push(copy);
         };
         this.uniforms[name].pop = function(){
-            this.value = this.stack[this.stack.length - 1];
+            var copy = this.stack[this.stack.length - 1];
+            this.value =
+                type == "1f" || type == "1i" ? copy :
+                type == "2f" || type == "2i" ? vec2.copy([], copy) :
+                type == "3f" || type == "3i" ? vec3.copy([], copy) :
+                type == "4f" || type == "4i" ? vec4.copy([], copy) :
+                type == "Matrix2f" ? mat2.copy([], copy) :
+                type == "Matrix3f" ? mat3.copy([], copy) :
+                type == "Matrix4f" ? mat4.copy([], copy) :
+                undefined;
             this.stack.pop();
         };
     };
@@ -118,16 +191,14 @@ function get_shader(gl, vertex_shader_src, fragment_shader_src) {
     return shader;
 };
 
-function get_displist(gl, shader_program) {
-    var displist = {};
+function get_legacygl(gl, shader_program) {
+    var legacygl = {};
     
     // vertex attributes
-    displist.vertex_attributes = {};
-    displist.add_vertex_attribute = function(name, size) {
+    legacygl.vertex_attributes = {};
+    legacygl.add_vertex_attribute = function(name, size) {
         this.vertex_attributes[name] = {};
         this.vertex_attributes[name].size = size;
-        // array and buffer
-        this.vertex_attributes[name].buffer = gl.createBuffer();
         // current value
         this.vertex_attributes[name].current = [];
         for (var i = 0; i < size; ++i)
@@ -142,50 +213,33 @@ function get_displist(gl, shader_program) {
         };
     };
     // special treatment for position attribute
-    displist.add_vertex_attribute("position", 3);
-    delete displist.position;
-    delete displist.vertex_attributes.position.current;
-    displist.vertex3 = function(x, y, z) {
+    legacygl.add_vertex_attribute("position", 3);
+    delete legacygl.position;
+    delete legacygl.vertex_attributes.position.current;
+    legacygl.vertex = function(x, y, z) {
         for (var name in this.vertex_attributes) {
             var push_value = name == "position" ? [x, y, z] : this.vertex_attributes[name].current;
             for (var i = 0; i < this.vertex_attributes[name].size; ++i)
                 this.vertex_attributes[name].array.push(push_value[i]);
         }
     };
-    displist.vertex2 = function(x, y) {
-        this.vertex3(x, y, 0);
-    };
     // begin and end
-    displist.begin = function(mode) {
+    legacygl.begin = function(mode) {
         this.mode = mode;
         // clear array
         for (var name in this.vertex_attributes)
             this.vertex_attributes[name].array = [];
     };
-    displist.end = function() {
+    legacygl.end = function() {
         for (var name in this.vertex_attributes) {
+            this.vertex_attributes[name].buffer = gl.createBuffer();
             gl.bindBuffer(gl.ARRAY_BUFFER, this.vertex_attributes[name].buffer);
             gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.vertex_attributes[name].array), gl.STATIC_DRAW);
-        }
-    };
-    // draw call with displaylist-like mechanism
-    displist.set_drawfunc = function(drawfunc) {
-        this.drawfunc = drawfunc;
-        this.is_valid = false;
-    };
-    displist.draw = function() {
-        if (!this.is_valid) {
-            this.drawfunc();
-            this.is_valid = true;
-        }
-        for (var name in this.vertex_attributes) {
-            gl.bindBuffer(gl.ARRAY_BUFFER, this.vertex_attributes[name].buffer);
             gl.vertexAttribPointer(this.vertex_attributes[name].location, this.vertex_attributes[name].size, gl.FLOAT, false, 0, 0);
         }
         gl.drawArrays(this.mode, 0, this.vertex_attributes.position.array.length / 3);
+        for (var name in this.vertex_attributes)
+            gl.deleteBuffer(this.vertex_attributes[name].buffer);
     };
-    displist.invalidate = function() {
-        this.is_valid = false;
-    };
-    return displist;
+    return legacygl;
 }
