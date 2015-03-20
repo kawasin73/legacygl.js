@@ -8,36 +8,51 @@
 <script type="text/javascript">
     var gl;
     var canvas;
-    var shader = {};
-    var displist = {};
+    var shader;
+    var displist;
+    var camera;
     
     function draw() {
-        mat4.ortho2d(shader.uniforms.projection.value, 0, canvas.width, 0, canvas.height);
+        var modelview = shader.uniforms.modelview;
+        var projection = shader.uniforms.projection;
+        mat4.perspective(projection.value, 0.5, canvas.width / canvas.height, 0.1, 100);
+        camera.lookAt(modelview.value);
+        shader.set_uniforms();
         displist.set_drawfunc(function(){
-            displist.begin(gl.TRIANGLES);
-            displist.color(1, 0, 0);
-            displist.vertex2(1, 0);
-            displist.color(0, 1, 0);
-            displist.vertex2(0, 1);
-            displist.color(0, 0, 1);   
-            displist.vertex2(0, 0);
+            displist.begin(gl.LINES);
+            displist.color(1, 0, 0); displist.vertex3(0, 0, 0); displist.vertex3(1, 0, 0);
+            displist.color(0, 1, 0); displist.vertex3(0, 0, 0); displist.vertex3(0, 1, 0);
+            displist.color(0, 0, 1); displist.vertex3(0, 0, 0); displist.vertex3(0, 0, 1);
             displist.end();
         });
-        var modelview = shader.uniforms.modelview.value;
-        mat4.scale_ip(modelview, [100, 200, 1]);
-        shader.uniforms.modelview.push();
-        mat4.translate_ip(modelview, [0.2, 0.3, 0]);
-        shader.set_uniforms();
         displist.draw();
-        shader.uniforms.modelview.pop();
-        shader.uniforms.modelview.push();
-        mat4.translate_ip(modelview, [-0.5, 1, 0]);
-        shader.set_uniforms();
-        displist.draw();
-        shader.uniforms.modelview.pop();
+    };
+    function onmousedown(evt) {
+        if (evt.altKey) {
+            camera.start_moving(
+                evt.clientX, evt.clientY,
+                evt.shiftKey ? "zoom" : evt.ctrlKey ? "pan" : "rotate");
+            return;
+        }
+    };
+    function onmousemove(evt) {
+        if (camera.is_moving()) {
+            camera.move(evt.clientX, evt.clientY);
+            draw();
+            return;
+        }
+    }
+    function onmouseup(evt) {
+        if (camera.is_moving()) {
+            camera.finish_moving();
+            return;
+        }
     }
     function init() {
         canvas = document.getElementById("canvas");
+        canvas.onmousedown = onmousedown;
+        canvas.onmousemove = onmousemove;
+        canvas.onmouseup = onmouseup;
         gl = canvas.getContext("experimental-webgl");
         gl.viewportWidth = canvas.width;
         gl.viewportHeight = canvas.height;
@@ -67,7 +82,9 @@
 
         displist = get_displist(gl, shader.program);
         displist.add_vertex_attribute("color", 3);
-    }
+
+        camera = get_camera(canvas.width, canvas.height);
+    };
 </script>
 
 
@@ -75,7 +92,7 @@
 
 
 <body onload="init();draw();">
-    <canvas id="canvas" width="640" height="480"></canvas>
+    <canvas id="canvas" width="640" height="480" style="border:1px solid #000000;"></canvas>
 </body>
 
 </html>
