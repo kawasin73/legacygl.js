@@ -7,155 +7,156 @@
 <script src="gl-matrix-util.js"></script>
 <script src="common.js"></script>
 <script type="text/javascript">
-    var gl;
-    var canvas;
-    var shader;
-    var legacygl;
-    var drawutil;
-    var camera;
-    var objects;
-    var selected_index = -1;
-    var is_translating = false;
-    var plane_origin;
-    var plane_normal;
-    
-    function draw() {
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-        var modelview = shader.uniforms.modelview;
-        camera.lookAt(modelview.value);
-        // zx-grid and xyz axis
+var gl;
+var canvas;
+var shader;
+var legacygl;
+var drawutil;
+var camera;
+var objects;
+var selected_index = -1;
+var is_translating = false;
+var plane_origin;
+var plane_normal;
+
+function draw() {
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    var modelview = shader.uniforms.modelview;
+    camera.lookAt(modelview.value);
+    // zx-grid and xyz axis
+    shader.set_uniforms();
+    legacygl.color(0.5, 0.5, 0.5);
+    drawutil.zxgrid(10);
+    drawutil.xyzaxis();
+    // objects
+    for (var i = 0; i < objects.length; ++i) {
+        modelview.push();
+        mat4.translate_ip(modelview.value, objects[i].position);
+        mat4.scale_ip(modelview.value, [objects[i].scale, objects[i].scale, objects[i].scale]);
         shader.set_uniforms();
-        drawutil.zxgrid(10);
-        drawutil.xyzaxis();
-        // objects
-        for (var i = 0; i < objects.length; ++i) {
-            modelview.push();
-            mat4.translate_ip(modelview.value, objects[i].position);
-            mat4.scale_ip(modelview.value, [objects[i].scale, objects[i].scale, objects[i].scale]);
-            shader.set_uniforms();
-            drawutil.fill_and_line(
-                function(mode) { drawutil.cube(mode, 0.1); },
-                i == selected_index ? [1, 0, 0] : [0, 0.7, 1],
-                [0, 0, 0]);
-            modelview.pop();
-        }
-    };
-    function onmousedown(evt) {
-        if (evt.altKey) {
-            camera.start_moving(
-                evt.clientX, evt.clientY,
-                evt.shiftKey ? "zoom" : evt.ctrlKey ? "pan" : "rotate");
-            return;
-        }
-        // pick nearest object
-        selected_index = -1;
-        var candidates = [];
-        var mouse_win = [evt.clientX, canvas.height - evt.clientY];   // mouse position in window coordinate
+        drawutil.fill_and_line(
+            function(mode) { drawutil.cube(mode, 0.1); },
+            i == selected_index ? [1, 0, 0] : [0, 0.7, 1],
+            [0, 0, 0]);
+        modelview.pop();
+    }
+};
+function onmousedown(evt) {
+    if (evt.altKey) {
+        camera.start_moving(
+            evt.clientX, evt.clientY,
+            evt.shiftKey ? "zoom" : evt.ctrlKey ? "pan" : "rotate");
+        return;
+    }
+    // pick nearest object
+    selected_index = -1;
+    var candidates = [];
+    var mouse_win = [evt.clientX, canvas.height - evt.clientY];   // mouse position in window coordinate
+    var modelview = shader.uniforms.modelview.value;
+    var projection = shader.uniforms.projection.value;
+    var viewport = [0, 0, canvas.width, canvas.height];
+    for (var i = 0; i < objects.length; ++i) {
+        var object_win = project(objects[i].position, modelview, projection, viewport);     // object's position in window coordinate
+        if (vec2.dist(mouse_win, object_win) < 20)
+            candidates.push({ dist: vec3.dist(camera.eye, objects[i].position), index:i });
+    }
+    if (candidates.length > 0) {
+        candidates.sort(function(a, b){return a.dist - b.dist});
+        selected_index = candidates[0].index;
+        plane_origin = objects[selected_index].position;
+        plane_normal = vec3.normalize_ip(camera.eye_to_center());
+        is_translating = true;
+    }
+    document.getElementById("input1").value = selected_index == -1 ? null : objects[selected_index].scale;
+    draw();
+};
+function onmousemove(evt) {
+    if (camera.is_moving()) {
+        camera.move(evt.clientX, evt.clientY);
+        draw();
+        return;
+    }
+    if (is_translating) {
         var modelview = shader.uniforms.modelview.value;
         var projection = shader.uniforms.projection.value;
         var viewport = [0, 0, canvas.width, canvas.height];
-        for (var i = 0; i < objects.length; ++i) {
-            var object_win = project(objects[i].position, modelview, projection, viewport);     // object's position in window coordinate
-            if (vec2.dist(mouse_win, object_win) < 20)
-                candidates.push({ dist: vec3.dist(camera.eye, objects[i].position), index:i });
-        }
-        if (candidates.length > 0) {
-            candidates.sort(function(a, b){return a.dist - b.dist});
-            selected_index = candidates[0].index;
-            plane_origin = objects[selected_index].position;
-            plane_normal = vec3.normalize_ip(camera.eye_to_center());
-            is_translating = true;
-        }
-        document.getElementById("input1").value = selected_index == -1 ? null : objects[selected_index].scale;
-        draw();
-    };
-    function onmousemove(evt) {
-        if (camera.is_moving()) {
-            camera.move(evt.clientX, evt.clientY);
-            draw();
-            return;
-        }
-        if (is_translating) {
-            var modelview = shader.uniforms.modelview.value;
-            var projection = shader.uniforms.projection.value;
-            var viewport = [0, 0, canvas.width, canvas.height];
-            var mouse_win = [evt.clientX, canvas.height - evt.clientY, 1];   // mouse position in window coordinate
-            var mouse_obj = unproject(mouse_win, modelview, projection, viewport);  // unprojection of mouse position in 3D
-            var eye_to_mouse = vec3.sub([], mouse_obj, camera.eye);
-            var eye_to_origin = vec3.sub([], plane_origin, camera.eye);
-            var s1 = vec3.dot(eye_to_mouse, plane_normal);
-            var s2 = vec3.dot(eye_to_origin, plane_normal);
-            var eye_to_intersection = vec3.scale([], eye_to_mouse, s2 / s1);
-            objects[selected_index].position = vec3.add([], camera.eye, eye_to_intersection);;
-            draw();
-        }
-    }
-    function onmouseup(evt) {
-        if (camera.is_moving()) {
-            camera.finish_moving();
-            return;
-        }
-        is_translating = false;
-    }
-    function input1_onchange(evt) {
-        if (selected_index == -1)
-            return;
-        objects[selected_index].scale = evt.target.value;
+        var mouse_win = [evt.clientX, canvas.height - evt.clientY, 1];   // mouse position in window coordinate
+        var mouse_obj = unproject(mouse_win, modelview, projection, viewport);  // unprojection of mouse position in 3D
+        var eye_to_mouse = vec3.sub([], mouse_obj, camera.eye);
+        var eye_to_origin = vec3.sub([], plane_origin, camera.eye);
+        var s1 = vec3.dot(eye_to_mouse, plane_normal);
+        var s2 = vec3.dot(eye_to_origin, plane_normal);
+        var eye_to_intersection = vec3.scale([], eye_to_mouse, s2 / s1);
+        objects[selected_index].position = vec3.add([], camera.eye, eye_to_intersection);;
         draw();
     }
-    function init() {
-        // OpenGL context
-        canvas = document.getElementById("canvas");
-        gl = canvas.getContext("webgl");
-        if (!gl)
-            alert("Could not initialise WebGL, sorry :-(");
-        // set shader
-        var vertex_shader_src = "\
-            attribute vec3 a_position;\
-            attribute vec3 a_color;\
-            varying vec3 v_color;\
-            uniform mat4 u_modelview;\
-            uniform mat4 u_projection;\
-            void main(void) {\
-                gl_Position = u_projection * u_modelview * vec4(a_position, 1.0);\
-                gl_PointSize = 5.0;\
-                v_color = a_color;\
-            }\
-            ";
-        var fragment_shader_src = "\
-            precision mediump float;\
-            varying vec3 v_color;\
-            void main(void) {\
-                gl_FragColor = vec4(v_color, 1.0);\
-            }\
-            ";
-        shader = get_shader(gl, vertex_shader_src, fragment_shader_src);
-        shader.add_uniform("modelview", "Matrix4f");
-        shader.add_uniform("projection", "Matrix4f");
-        mat4.perspective(shader.uniforms.projection.value, 30 * Math.PI / 180, canvas.width / canvas.height, 0.1, 100);
-        // utilities
-        legacygl = get_legacygl(gl, shader.program);
-        legacygl.add_vertex_attribute("color", 3);
-        drawutil = get_drawutil(gl, legacygl);
-        // app data
-        camera = get_camera(canvas.width, canvas.height);
-        camera.eye = [0.2, 0.5, 8];
-        objects = [
-            {position: [1, 2, 3], scale: 1.0},
-            {position: [-1, 1, 2], scale: 1.2},
-            {position: [2, -1, -1], scale: 0.7}
-        ];
-        // event handlers
-        canvas.onmousedown = onmousedown;
-        document.onmousemove = onmousemove;
-        document.onmouseup = onmouseup;
-        document.getElementById("input1").onchange = input1_onchange;
-        // init OpenGL settings
-        gl.viewport(0, 0, canvas.width, canvas.height);
-        gl.enable(gl.DEPTH_TEST);
-        gl.polygonOffset(1, 1);
-        draw();
-    };
+}
+function onmouseup(evt) {
+    if (camera.is_moving()) {
+        camera.finish_moving();
+        return;
+    }
+    is_translating = false;
+}
+function input1_onchange(evt) {
+    if (selected_index == -1)
+        return;
+    objects[selected_index].scale = evt.target.value;
+    draw();
+}
+function init() {
+    // OpenGL context
+    canvas = document.getElementById("canvas");
+    gl = canvas.getContext("webgl");
+    if (!gl)
+        alert("Could not initialise WebGL, sorry :-(");
+    // set shader
+    var vertex_shader_src = "\
+        attribute vec3 a_position;\
+        attribute vec3 a_color;\
+        varying vec3 v_color;\
+        uniform mat4 u_modelview;\
+        uniform mat4 u_projection;\
+        void main(void) {\
+            gl_Position = u_projection * u_modelview * vec4(a_position, 1.0);\
+            gl_PointSize = 5.0;\
+            v_color = a_color;\
+        }\
+        ";
+    var fragment_shader_src = "\
+        precision mediump float;\
+        varying vec3 v_color;\
+        void main(void) {\
+            gl_FragColor = vec4(v_color, 1.0);\
+        }\
+        ";
+    shader = get_shader(gl, vertex_shader_src, fragment_shader_src);
+    shader.add_uniform("modelview", "Matrix4f");
+    shader.add_uniform("projection", "Matrix4f");
+    mat4.perspective(shader.uniforms.projection.value, 30 * Math.PI / 180, canvas.width / canvas.height, 0.1, 100);
+    // utilities
+    legacygl = get_legacygl(gl, shader.program);
+    legacygl.add_vertex_attribute("color", 3);
+    drawutil = get_drawutil(gl, legacygl);
+    // app data
+    camera = get_camera(canvas.width, canvas.height);
+    camera.eye = [0.2, 0.5, 8];
+    objects = [
+        {position: [1, 2, 3], scale: 1.0},
+        {position: [-1, 1, 2], scale: 1.2},
+        {position: [2, -1, -1], scale: 0.7}
+    ];
+    // event handlers
+    canvas.onmousedown = onmousedown;
+    document.onmousemove = onmousemove;
+    document.onmouseup = onmouseup;
+    document.getElementById("input1").onchange = input1_onchange;
+    // init OpenGL settings
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.enable(gl.DEPTH_TEST);
+    gl.polygonOffset(1, 1);
+    draw();
+};
 </script>
 
 
