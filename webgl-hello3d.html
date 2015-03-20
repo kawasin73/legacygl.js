@@ -49,12 +49,12 @@
             var projection = shader.uniforms.projection.value;
             var viewport = [0, 0, canvas.width, canvas.height];
             var win_xyz = project(objects[i].position, modelview, projection, viewport);
-            if (vec2.dist([evt.clientX, canvas.height - evt.clientY], [win_xyz[0], win_xyz[1]]) < 30)
-                candidates.push({ dist: vec3.dist(camera.eye, objects[i].position), index: i });
+            if (vec2.dist([evt.clientX, canvas.height - evt.clientY], [win_xyz[0], win_xyz[1]]) < 20)
+                candidates.push({ dist: vec3.dist(camera.eye, objects[i].position), index:i });
             objects[i].selected = false;
         }
         if (candidates.length > 0) {
-            candidates.sort();
+            candidates.sort(function(a, b){return a.dist - b.dist});
             objects[candidates[0].index].selected = true;
         }
         draw();
