@@ -2,6 +2,7 @@
 
 <head>
 <title>WebGL Hello World (3D)</title>
+<script src="jquery-1.11.2.min.js"></script>
 <script src="gl-matrix.js"></script>
 <script src="gl-matrix-inplace.js"></script>
 <script src="common.js"></script>
@@ -13,6 +14,7 @@
     var drawutil;
     var camera;
     var objects;
+    var selected_object = -1;
     
     function draw() {
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -30,7 +32,7 @@
             shader.set_uniforms();
             drawutil.fill_and_line(
                 function(mode) { drawutil.cube(mode, 0.1); },
-                objects[i].selected ? [1, 0, 0] : [0, 0.7, 1],
+                i == selected_object ? [1, 0, 0] : [0, 0.7, 1],
                 [0, 0, 0]);
             modelview.pop();
         }
@@ -43,6 +45,7 @@
             return;
         }
         // pick nearest object
+        selected_object = -1;
         var candidates = [];
         for (var i = 0; i < objects.length; ++i) {
             var modelview = shader.uniforms.modelview.value;
@@ -51,12 +54,12 @@
             var win_xyz = project(objects[i].position, modelview, projection, viewport);
             if (vec2.dist([evt.clientX, canvas.height - evt.clientY], [win_xyz[0], win_xyz[1]]) < 20)
                 candidates.push({ dist: vec3.dist(camera.eye, objects[i].position), index:i });
-            objects[i].selected = false;
         }
         if (candidates.length > 0) {
             candidates.sort(function(a, b){return a.dist - b.dist});
-            objects[candidates[0].index].selected = true;
+            selected_object = candidates[0].index;
         }
+        document.getElementById("input1").value = selected_object == -1 ? "(no object selected)" : objects[selected_object].scale;
         draw();
     };
     function onmousemove(evt) {
@@ -72,10 +75,17 @@
             return;
         }
     }
+    function input1_onchange(evt) {
+        if (selected_object == -1)
+            return;
+        objects[selected_object].scale = evt.target.value;
+        draw();
+    }
     function init() {
         // OpenGL context
         canvas = document.getElementById("canvas");
-        gl = canvas.getContext("experimental-webgl");
+        input1 = document.getElementById("input1");
+        gl = canvas.getContext("webgl");
         if (!gl)
             alert("Could not initialise WebGL, sorry :-(");
         // set shader
@@ -110,27 +120,29 @@
         camera = get_camera(canvas.width, canvas.height);
         camera.eye = [0.2, 0.5, 8];
         objects = [
-            {position: [1, 2, 3], scale: 1.0, selected: false},
-            {position: [-1, 1, 2], scale: 1.2, selected: false},
-            {position: [2, -1, -1], scale: 0.7, selected: false}
+            {position: [1, 2, 3], scale: 1.0},
+            {position: [-1, 1, 2], scale: 1.2},
+            {position: [2, -1, -1], scale: 0.7}
         ];
         // event handlers
         canvas.onmousedown = onmousedown;
         document.onmousemove = onmousemove;
         document.onmouseup = onmouseup;
+        document.getElementById("input1").onchange = input1_onchange;
         // init OpenGL settings
         gl.viewport(0, 0, canvas.width, canvas.height);
         gl.enable(gl.DEPTH_TEST);
         gl.polygonOffset(1, 1);
+        draw();
     };
 </script>
 
 
 </head>
 
-
-<body onload="init();draw();">
+<body onload="init();">
     <canvas id="canvas" width="640" height="480" style="border:1px solid #000000;"></canvas>
+    <input type="number" id="input1" step="0.1" />
 </body>
 
 </html>
