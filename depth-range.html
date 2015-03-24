@@ -1,0 +1,127 @@
+<html>
+
+<head>
+<title>WebGL Hello World (3D)</title>
+<script src="jquery-1.11.2.min.js"></script>
+<script src="gl-matrix.js"></script>
+<script src="gl-matrix-util.js"></script>
+<script src="common.js"></script>
+<script type="text/javascript">
+var gl;
+var canvas;
+var shader;
+var legacygl;
+var drawutil;
+var camera;
+
+function draw() {
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    var modelview = shader.uniforms.modelview;
+    camera.lookAt(modelview.value);
+    shader.set_uniforms();
+    // grid
+    legacygl.color(0.2, 0.2, 0.2);
+    drawutil.zxgrid(50);
+    // box
+    mat4.translate_ip(modelview.value, [5.5, 5.1, 4.5]);
+    shader.set_uniforms();
+    legacygl.color(0, 0.7, 1);
+    if (document.getElementById("input_polygon_offset").checked)
+        gl.enable(gl.POLYGON_OFFSET_FILL);
+    drawutil.cube("fill", 10);
+    gl.disable(gl.POLYGON_OFFSET_FILL);
+    legacygl.color(0, 0, 0);
+    drawutil.cube("line", 10);
+};
+function onmousedown(evt) {
+    if (evt.altKey) {
+        camera.start_moving(
+            evt.clientX, evt.clientY,
+            evt.shiftKey ? "zoom" : evt.ctrlKey ? "pan" : "rotate");
+        return;
+    }
+};
+function onmousemove(evt) {
+    if (camera.is_moving()) {
+        camera.move(evt.clientX, evt.clientY);
+        draw();
+        return;
+    }
+}
+function onmouseup(evt) {
+    if (camera.is_moving()) {
+        camera.finish_moving();
+        return;
+    }
+}
+function init() {
+    // OpenGL context
+    canvas = document.getElementById("canvas");
+    gl = canvas.getContext("experimental-webgl");
+    if (!gl)
+        alert("Could not initialise WebGL, sorry :-(");
+    // set shader
+    var vertex_shader_src = "\
+        attribute vec3 a_vertex;\
+        attribute vec3 a_color;\
+        varying vec3 v_color;\
+        uniform mat4 u_modelview;\
+        uniform mat4 u_projection;\
+        void main(void) {\
+            gl_Position = u_projection * u_modelview * vec4(a_vertex, 1.0);\
+            gl_PointSize = 5.0;\
+            v_color = a_color;\
+        }\
+        ";
+    var fragment_shader_src = "\
+        precision mediump float;\
+        varying vec3 v_color;\
+        void main(void) {\
+            gl_FragColor = vec4(v_color, 1.0);\
+        }\
+        ";
+    shader = get_shader(gl, vertex_shader_src, fragment_shader_src);
+    shader.add_uniform("modelview", "Matrix4f");
+    shader.add_uniform("projection", "Matrix4f");
+    mat4.perspective(shader.uniforms.projection.value, 30 * Math.PI / 180, canvas.width / canvas.height, 0.1, 1000);
+    // utilities
+    legacygl = get_legacygl(gl, shader.program);
+    legacygl.add_vertex_attribute("color", 3);
+    drawutil = get_drawutil(gl, legacygl);
+    // app data
+    camera = get_camera(canvas.width, canvas.height);
+    camera.eye = [200, 50, 100];
+    // event handlers
+    canvas.onmousedown = onmousedown;
+    document.onmousemove = onmousemove;
+    document.onmouseup = onmouseup;
+    function zrange_onchange(evt) {
+        var znear = Number(document.getElementById("input_znear").value);
+        var zfar = Number(document.getElementById("input_zfar").value);
+        mat4.perspective(shader.uniforms.projection.value, 30 * Math.PI / 180, canvas.width / canvas.height, znear, zfar);
+        draw();
+    };
+    document.getElementById("input_znear").onchange = zrange_onchange;
+    document.getElementById("input_zfar").onchange = zrange_onchange;
+    document.getElementById("input_polygon_offset").onchange = function(evt) { draw(); };
+    // init OpenGL settings
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.enable(gl.DEPTH_TEST);
+    gl.polygonOffset(1, 1);
+    gl.clearColor(1, 1, 1, 1);
+    draw();
+    console.log(gl.getParameter(gl.DEPTH_BITS));
+};
+</script>
+
+
+</head>
+
+<body onload="init();">
+    <canvas id="canvas" width="640" height="480" style="border:1px solid #000000;"></canvas>
+    <div><input type="number" id="input_znear" value=0.1></div>
+    <div><input type="number" id="input_zfar" value=1000></div>
+    <div><input type="checkbox" id="input_polygon_offset" checked></div>
+</body>
+
+</html>
