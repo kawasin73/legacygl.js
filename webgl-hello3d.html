@@ -26,8 +26,8 @@ function draw() {
     // zx-grid and xyz axis
     shader.set_uniforms();
     legacygl.color(0.5, 0.5, 0.5);
-    drawutil.zxgrid(10);
-    drawutil.xyzaxis();
+    drawutil.zxgrid(50);
+    // drawutil.xyzaxis();
     // objects
     for (var i = 0; i < objects.length; ++i) {
         modelview.push();
@@ -35,7 +35,7 @@ function draw() {
         mat4.scale_ip(modelview.value, [objects[i].scale, objects[i].scale, objects[i].scale]);
         shader.set_uniforms();
         drawutil.fill_and_line(
-            function(mode) { drawutil.cube(mode, 0.1); },
+            function(mode) { drawutil.cube(mode, 1.0); },
             i == selected_index ? [1, 0, 0] : [0, 0.7, 1],
             [0, 0, 0]);
         modelview.pop();
@@ -104,10 +104,14 @@ function input1_onchange(evt) {
     objects[selected_index].scale = evt.target.value;
     draw();
 }
+function input2_onchange(evt) {
+    gl[evt.target.checked ? "enable" : "disable"](gl.DEPTH_TEST);
+    draw();
+}
 function init() {
     // OpenGL context
     canvas = document.getElementById("canvas");
-    gl = canvas.getContext("webgl");
+    gl = canvas.getContext("experimental-webgl");
     if (!gl)
         alert("Could not initialise WebGL, sorry :-(");
     // set shader
@@ -133,28 +137,30 @@ function init() {
     shader = get_shader(gl, vertex_shader_src, fragment_shader_src);
     shader.add_uniform("modelview", "Matrix4f");
     shader.add_uniform("projection", "Matrix4f");
-    mat4.perspective(shader.uniforms.projection.value, 30 * Math.PI / 180, canvas.width / canvas.height, 0.1, 100);
+    mat4.perspective(shader.uniforms.projection.value, 30 * Math.PI / 180, canvas.width / canvas.height, 0.1, 1000);
     // utilities
     legacygl = get_legacygl(gl, shader.program);
     legacygl.add_vertex_attribute("color", 3);
     drawutil = get_drawutil(gl, legacygl);
     // app data
     camera = get_camera(canvas.width, canvas.height);
-    camera.eye = [0.2, 0.5, 8];
+    camera.eye = [200, 50, 100];
     objects = [
-        {position: [0, 0, 0], scale: 10},
-        {position: [-1, 1, 2], scale: 1.2},
-        {position: [2, -1, -1], scale: 0.7}
+        {position: [0, 5.1, 0], scale: 10},
+        {position: [10, 5.1, 15], scale: 10},
+        {position: [-10, 5.1, -15], scale: 10}
     ];
     // event handlers
     canvas.onmousedown = onmousedown;
     document.onmousemove = onmousemove;
     document.onmouseup = onmouseup;
     document.getElementById("input1").onchange = input1_onchange;
+    document.getElementById("input2").onchange = input2_onchange;
     // init OpenGL settings
     gl.viewport(0, 0, canvas.width, canvas.height);
-    gl.enable(gl.DEPTH_TEST);
+    // gl.enable(gl.DEPTH_TEST);
     gl.polygonOffset(1, 1);
+    gl.clearColor(1, 1, 1, 1);
     draw();
 };
 </script>
@@ -164,7 +170,8 @@ function init() {
 
 <body onload="init();">
     <canvas id="canvas" width="640" height="480" style="border:1px solid #000000;"></canvas>
-    <input type="number" id="input1" step="0.1" />
+    <div>Input 1: <input type="number" id="input1" step="0.1" /></div>
+    <div>Input 2: <input type="checkbox" id="input2" /></div>
 </body>
 
 </html>
