@@ -73,8 +73,28 @@ function get_drawutil(gl, legacygl) {
         legacygl.color(line_color[0], line_color[1], line_color[2]);
         drawfunc("line");
     };
+    drawutil.quadmesh = function(mode, vertices, faces) {
+        legacygl.begin(mode == "line" ? gl.LINES : legacygl.QUADS);
+        for (var f = 0; f < faces.length / 4; ++f) {
+            for (var i = 0; i < 4; ++i) {
+                var v0 = faces[4 * f + i];
+                var x0 = vertices[3 * v0];
+                var y0 = vertices[3 * v0 + 1];
+                var z0 = vertices[3 * v0 + 2];
+                legacygl.vertex(x0, y0, z0);
+                if (mode == "line") {
+                    var v1 = faces[4 * f + (i + 1) % 4];
+                    var x1 = vertices[3 * v1];
+                    var y1 = vertices[3 * v1 + 1];
+                    var z1 = vertices[3 * v1 + 2];
+                    legacygl.vertex(x1, y1, z1);
+                }
+            }
+        }
+        legacygl.end();
+    };
     drawutil.trimesh = function(mode, vertices, faces) {
-        legacygl.begin(gl[mode == "line" ? "LINES" : "TRIANGLES"]);
+        legacygl.begin(mode == "line" ? gl.LINES : gl.TRIANGLES);
         for (var f = 0; f < faces.length / 3; ++f) {
             for (var i = 0; i < 3; ++i) {
                 var v0 = faces[3 * f + i];
@@ -95,7 +115,7 @@ function get_drawutil(gl, legacygl) {
     };
     drawutil.cube = function(mode, size) {
         var r = size / 2;
-        this.trimesh(mode, 
+        this.quadmesh(mode, 
             [ // vertices
             -r, -r, -r,
              r, -r, -r,
@@ -106,12 +126,12 @@ function get_drawutil(gl, legacygl) {
             -r,  r,  r,
              r,  r,  r
             ], [ // faces
-            1, 3, 7, 7, 5, 1, // positive-x
-            3, 2, 6, 6, 7, 3, // positive-y
-            2, 0, 4, 4, 6, 2, // negative-x
-            0, 1, 5, 5, 4, 0, // negative-y
-            4, 5, 7, 7, 6, 4, // positive-z
-            0, 2, 3, 3, 1, 0  // negative-z
+            1, 3, 7, 5, // positive-x
+            3, 2, 6, 7, // positive-y
+            2, 0, 4, 6, // negative-x
+            0, 1, 5, 4, // negative-y
+            4, 5, 7, 6, // positive-z
+            0, 2, 3, 1  // negative-z
             ]
         );
     };
@@ -258,51 +278,69 @@ function get_legacygl(gl, shader_program) {
     var legacygl = {};
     
     // vertex attributes
-    legacygl.vertex_attributes = {};
+    legacygl.vertex_attributes = [];
     legacygl.add_vertex_attribute = function(name, size) {
-        this.vertex_attributes[name] = {};
-        this.vertex_attributes[name].size = size;
-        // current value
-        this.vertex_attributes[name].current = [];
+        var vertex_attribute = { name: name, size: size };
+        // initialize current value with 0
+        vertex_attribute.current = [];
         for (var i = 0; i < size; ++i)
-            this.vertex_attributes[name].current[i] = 0;
-        // shader location
-        this.vertex_attributes[name].location = gl.getAttribLocation(shader_program, "a_" + name);
-        gl.enableVertexAttribArray(this.vertex_attributes[name].location);
-        // current value setter
+            vertex_attribute.current.push(0);
+        // register current value setter func
         this[name] = function() {
             for (var i = 0; i < size; ++i)
-                this.vertex_attributes[name].current[i] = arguments[i];
+                vertex_attribute.current[i] = arguments[i];
         };
+        // shader location
+        vertex_attribute.location = gl.getAttribLocation(shader_program, "a_" + name);
+        gl.enableVertexAttribArray(vertex_attribute.location);
+        // add to the list
+        this.vertex_attributes.push(vertex_attribute);
     };
-    // special treatment for position attribute
-    legacygl.add_vertex_attribute("position", 3);
-    delete legacygl.position;
-    delete legacygl.vertex_attributes.position.current;
+    // special treatment for vertex position attribute
+    legacygl.add_vertex_attribute("vertex", 3);
+    delete legacygl.vertex_attributes[0].current;
     legacygl.vertex = function(x, y, z) {
-        for (var name in this.vertex_attributes) {
-            var push_value = name == "position" ? [x, y, z] : this.vertex_attributes[name].current;
-            for (var i = 0; i < this.vertex_attributes[name].size; ++i)
-                this.vertex_attributes[name].array.push(push_value[i]);
+        this.vertex_attributes.forEach(function(vertex_attribute) {
+            var value = vertex_attribute.name == "vertex" ? [x, y, z] : vertex_attribute.current;
+            for (var i = 0; i < vertex_attribute.size; ++i)
+                vertex_attribute.array.push(value[i]);
+        });
+        // emulate GL_QUADS
+        var num_vertices = this.vertex_attributes[0].array.length / 3;
+        if (this.mode == this.QUADS && num_vertices % 6 == 4) {         // 6 vertices per quad (= 2 triangles)
+            var v0 = num_vertices - 4;
+            // add 2 vertices identical to [v0] and [v0+2] to construct the other half of the quad
+            for (var k = 0; k < 3; ++k) {
+                if (k == 1)
+                    continue;
+                this.vertex_attributes.forEach(function(vertex_attribute) {
+                    for (var i = 0; i < vertex_attribute.size; ++i)
+                        vertex_attribute.array.push(vertex_attribute.array[vertex_attribute.size * (v0 + k) + i]);
+                });
+            }
         }
     };
     // begin and end
     legacygl.begin = function(mode) {
         this.mode = mode;
-        // clear array
-        for (var name in this.vertex_attributes)
-            this.vertex_attributes[name].array = [];
+        this.vertex_attributes.forEach(function(vertex_attribute) {
+            vertex_attribute.array = [];
+        });
     };
     legacygl.end = function() {
-        for (var name in this.vertex_attributes) {
-            this.vertex_attributes[name].buffer = gl.createBuffer();
-            gl.bindBuffer(gl.ARRAY_BUFFER, this.vertex_attributes[name].buffer);
-            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.vertex_attributes[name].array), gl.STATIC_DRAW);
-            gl.vertexAttribPointer(this.vertex_attributes[name].location, this.vertex_attributes[name].size, gl.FLOAT, false, 0, 0);
-        }
-        gl.drawArrays(this.mode, 0, this.vertex_attributes.position.array.length / 3);
-        for (var name in this.vertex_attributes)
-            gl.deleteBuffer(this.vertex_attributes[name].buffer);
+        this.vertex_attributes.forEach(function(vertex_attribute) {
+            vertex_attribute.buffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, vertex_attribute.buffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertex_attribute.array), gl.STATIC_DRAW);
+            gl.vertexAttribPointer(vertex_attribute.location, vertex_attribute.size, gl.FLOAT, false, 0, 0);
+        });
+        // emulate GL_QUADS
+        gl.drawArrays(this.mode == this.QUADS ? gl.TRIANGLES : this.mode, 0, this.vertex_attributes[0].array.length / 3);
+        this.vertex_attributes.forEach(function(vertex_attribute) {
+            gl.deleteBuffer(vertex_attribute.buffer);
+        });
     };
+    // emulate GL_QUADS
+    legacygl.QUADS = "GL_QUADS";
     return legacygl;
 }
