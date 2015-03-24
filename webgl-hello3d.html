@@ -20,14 +20,28 @@ var plane_origin;
 var plane_normal;
 
 function draw() {
+    if (shader.uniforms.show_depth.value)
+        gl.clearColor(0, 0, 0, 1);
+    else
+        gl.clearColor(1, 1, 1, 1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    mat4.perspective(shader.uniforms.projection.value, 30 * Math.PI / 180, canvas.width / canvas.height, shader.uniforms.znear.value, shader.uniforms.zfar.value);
     var modelview = shader.uniforms.modelview;
     camera.lookAt(modelview.value);
-    // zx-grid and xyz axis
     shader.set_uniforms();
     legacygl.color(0.5, 0.5, 0.5);
+    legacygl.begin(legacygl.QUADS);
+    legacygl.vertex(-50, 0, -50);
+    legacygl.vertex( 50, 0, -50);
+    legacygl.vertex( 50, 0,  50);
+    legacygl.vertex(-50, 0,  50);
+    legacygl.end();
+    shader.uniforms.modelview.push();
+    mat4.translate_ip(shader.uniforms.modelview.value, [0, 0.1, 0]);
+    shader.set_uniforms();
+    legacygl.color(0.2, 0.2, 0.2);
     drawutil.zxgrid(50);
-    // drawutil.xyzaxis();
+    shader.uniforms.modelview.pop();
     // objects
     for (var i = 0; i < objects.length; ++i) {
         modelview.push();
@@ -98,16 +112,6 @@ function onmouseup(evt) {
     }
     is_translating = false;
 }
-function input1_onchange(evt) {
-    if (selected_index == -1)
-        return;
-    objects[selected_index].scale = evt.target.value;
-    draw();
-}
-function input2_onchange(evt) {
-    gl[evt.target.checked ? "enable" : "disable"](gl.DEPTH_TEST);
-    draw();
-}
 function init() {
     // OpenGL context
     canvas = document.getElementById("canvas");
@@ -119,25 +123,41 @@ function init() {
         attribute vec3 a_vertex;\
         attribute vec3 a_color;\
         varying vec3 v_color;\
+        varying vec4 v_fragCoord;\
         uniform mat4 u_modelview;\
         uniform mat4 u_projection;\
         void main(void) {\
             gl_Position = u_projection * u_modelview * vec4(a_vertex, 1.0);\
             gl_PointSize = 5.0;\
             v_color = a_color;\
+            v_fragCoord = gl_Position;\
         }\
         ";
     var fragment_shader_src = "\
         precision mediump float;\
         varying vec3 v_color;\
+        varying vec4 v_fragCoord;\
+        uniform float u_znear;\
+        uniform float u_zfar;\
+        uniform int u_show_depth;\
         void main(void) {\
-            gl_FragColor = vec4(v_color, 1.0);\
+            if (u_show_depth > 0) {\
+                float normalized_depth = (v_fragCoord.z / v_fragCoord.w + 1.0) / 2.0; \
+                float c = (2.0 * u_znear) / (u_znear + u_zfar - normalized_depth * (u_zfar - u_znear));\
+                c = 1.0 - c;\
+                gl_FragColor = vec4(c, c, c, 1);\
+            } else\
+                gl_FragColor = vec4(v_color, 1.0);\
         }\
         ";
     shader = get_shader(gl, vertex_shader_src, fragment_shader_src);
     shader.add_uniform("modelview", "Matrix4f");
     shader.add_uniform("projection", "Matrix4f");
-    mat4.perspective(shader.uniforms.projection.value, 30 * Math.PI / 180, canvas.width / canvas.height, 0.1, 1000);
+    shader.add_uniform("znear", "1f");
+    shader.add_uniform("zfar", "1f");
+    shader.add_uniform("show_depth", "1i");
+    shader.uniforms.znear.value = 1;
+    shader.uniforms.zfar.value = 1000;
     // utilities
     legacygl = get_legacygl(gl, shader.program);
     legacygl.add_vertex_attribute("color", 3);
@@ -146,19 +166,36 @@ function init() {
     camera = get_camera(canvas.width, canvas.height);
     camera.eye = [200, 50, 100];
     objects = [
-        {position: [0, 5.1, 0], scale: 10},
-        {position: [10, 5.1, 15], scale: 10},
-        {position: [-10, 5.1, -15], scale: 10}
+        {position: [0, 5.15, 0], scale: 10},
+        {position: [10, 5.15, 15], scale: 10},
+        {position: [-10, 5.15, -15], scale: 10}
     ];
     // event handlers
     canvas.onmousedown = onmousedown;
     document.onmousemove = onmousemove;
     document.onmouseup = onmouseup;
-    document.getElementById("input1").onchange = input1_onchange;
-    document.getElementById("input2").onchange = input2_onchange;
+    document.getElementById("input1").onchange = function(evt) {
+        if (selected_index == -1)
+            return;
+        objects[selected_index].scale = evt.target.value;
+        draw();
+    };
+    document.getElementById("input2").onchange = function(evt) {
+        shader.uniforms.show_depth.value = 1 - shader.uniforms.show_depth.value;
+        // gl[evt.target.checked ? "enable" : "disable"](gl.DEPTH_TEST);
+        draw();
+    };
+    document.getElementById("input_znear").onchange = function(evt) {
+        shader.uniforms.znear.value = Number(evt.target.value);
+        draw();
+    };
+    document.getElementById("input_zfar").onchange = function(evt) {
+        shader.uniforms.zfar.value = Number(evt.target.value);
+        draw();
+    };
     // init OpenGL settings
     gl.viewport(0, 0, canvas.width, canvas.height);
-    // gl.enable(gl.DEPTH_TEST);
+    gl.enable(gl.DEPTH_TEST);
     gl.polygonOffset(1, 1);
     gl.clearColor(1, 1, 1, 1);
     draw();
@@ -172,6 +209,8 @@ function init() {
     <canvas id="canvas" width="640" height="480" style="border:1px solid #000000;"></canvas>
     <div>Input 1: <input type="number" id="input1" step="0.1" /></div>
     <div>Input 2: <input type="checkbox" id="input2" /></div>
+    <div>zNear: <input type="number" id="input_znear" value="1"/></div>
+    <div>zFar: <input type="number" id="input_zfar" value="1000"/></div>
 </body>
 
 </html>
