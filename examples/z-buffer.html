@@ -1,0 +1,155 @@
+<html>
+
+<head>
+<title>legacygl.js demo: z-buffer</title>
+<script src="../gl-matrix.js"></script>
+<script src="../gl-matrix-util.js"></script>
+<script src="../legacygl.js"></script>
+<script src="../camera.js"></script>
+<script src="../util.js"></script>
+<script type="text/javascript">
+var gl;
+var canvas;
+var shader;
+var legacygl;
+var drawutil;
+var camera;
+var use_polygonoffset;
+
+function draw() {
+    if (shader.uniforms.show_zbuffer.value)
+        gl.clearColor(0, 0, 0, 1);
+    else
+        gl.clearColor(1, 1, 1, 1);
+    if (document.getElementById("input_use_polygonoffset").checked)
+        gl.enable(gl.POLYGON_OFFSET_FILL);
+    else
+        gl.disable(gl.POLYGON_OFFSET_FILL);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    mat4.perspective(shader.uniforms.projection.value, 30 * Math.PI / 180, canvas.width / canvas.height, shader.uniforms.znear.value, shader.uniforms.zfar.value);
+    var modelview = shader.uniforms.modelview;
+    camera.lookAt(modelview.value);
+    shader.set_uniforms();
+    // draw zx-grid
+    legacygl.color(0.5, 0.5, 0.5);
+    legacygl.begin(legacygl.QUADS);
+    legacygl.vertex(-50, 0, -50);
+    legacygl.vertex( 50, 0, -50);
+    legacygl.vertex( 50, 0,  50);
+    legacygl.vertex(-50, 0,  50);
+    legacygl.end();
+    legacygl.color(0.2, 0.2, 0.2);
+    drawutil.zxgrid(50);
+    // draw cube
+    mat4.translate_ip(modelview.value, [1, 5, 2]);
+    shader.set_uniforms();
+    legacygl.color(0, 0.7, 1);
+    drawutil.cube("fill", 10);
+    legacygl.color(0, 0, 0);
+    drawutil.cube("line", 10);
+};
+function init() {
+    // OpenGL context
+    canvas = document.getElementById("canvas");
+    gl = canvas.getContext("experimental-webgl");
+    if (!gl)
+        alert("Could not initialise WebGL!");
+    // set shader
+    var vertex_shader_src = "\
+        attribute vec3 a_vertex;\
+        attribute vec3 a_color;\
+        varying vec3 v_color;\
+        varying vec4 v_fragCoord;\
+        uniform mat4 u_modelview;\
+        uniform mat4 u_projection;\
+        void main(void) {\
+            gl_Position = u_projection * u_modelview * vec4(a_vertex, 1.0);\
+            gl_PointSize = 5.0;\
+            v_color = a_color;\
+            v_fragCoord = gl_Position;\
+        }\
+        ";
+    var fragment_shader_src = "\
+        precision mediump float;\
+        varying vec3 v_color;\
+        varying vec4 v_fragCoord;\
+        uniform float u_znear;\
+        uniform float u_zfar;\
+        uniform int u_show_zbuffer;\
+        void main(void) {\
+            if (u_show_zbuffer > 0) {\
+                float nz = (v_fragCoord.z / v_fragCoord.w + 1.0) / 2.0; \
+                float c = 1.0 - (2.0 * u_znear) / (u_znear + u_zfar - nz * (u_zfar - u_znear));\
+                gl_FragColor = vec4(c, c, c, 1.0);\
+            } else\
+                gl_FragColor = vec4(v_color, 1.0);\
+        }\
+        ";
+    shader = get_shader(gl, vertex_shader_src, fragment_shader_src);
+    shader.add_uniform("modelview", "Matrix4f");
+    shader.add_uniform("projection", "Matrix4f");
+    shader.add_uniform("znear", "1f");
+    shader.add_uniform("zfar", "1f");
+    shader.add_uniform("show_zbuffer", "1i");
+    shader.uniforms.znear.value = 1;
+    shader.uniforms.zfar.value = 1000;
+    // utilities
+    legacygl = get_legacygl(gl, shader.program);
+    legacygl.add_vertex_attribute("color", 3);
+    drawutil = get_drawutil(gl, legacygl);
+    camera = get_camera(canvas.width, canvas.height);
+    camera.eye = [40, 20, 30];
+    // event handlers
+    canvas.onmousedown = function(evt) {
+        camera.start_moving(evt.clientX, evt.clientY, evt.shiftKey ? "zoom" : evt.ctrlKey ? "pan" : "rotate");
+    };
+    document.onmousemove = function(evt) {
+        if (camera.is_moving()) {
+            camera.move(evt.clientX, evt.clientY);
+            draw();
+        }
+    };
+    document.onmouseup = function(evt) {
+        if (camera.is_moving())
+            camera.finish_moving();
+    };
+    document.getElementById("input_show_zbuffer").onchange = function(evt) {
+        shader.uniforms.show_zbuffer.value = 1 - shader.uniforms.show_zbuffer.value;
+        draw();
+    };
+    document.getElementById("input_use_polygonoffset").onchange = function(evt) {
+        draw();
+    };
+    document.getElementById("input_znear").onchange = function(evt) {
+        shader.uniforms.znear.value = Number(evt.target.value);
+        draw();
+    };
+    document.getElementById("input_zfar").onchange = function(evt) {
+        shader.uniforms.zfar.value = Number(evt.target.value);
+        draw();
+    };
+    // init OpenGL settings
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.enable(gl.DEPTH_TEST);
+    gl.polygonOffset(1, 1);
+    gl.clearColor(1, 1, 1, 1);
+};
+</script>
+</head>
+<body onload="init(); draw();">
+    <h2>legacygl.js demo: z-buffer</h2>
+    <canvas id="canvas" width="640" height="480" style="border:1px solid #000000;"></canvas>
+    <table>
+    <tr><td>show z-buffer:</td><td><input type="checkbox" id="input_show_zbuffer" /></td></tr>
+    <tr><td>use polygon offset:</td><td><input type="checkbox" id="input_use_polygonoffset" checked/></td></tr>
+    <tr><td>zNear:</td><td> <input type="number" id="input_znear" value="1"/></td></tr>
+    <tr><td>zFar:</td><td> <input type="number" id="input_zfar" value="1000"/></td></tr>
+    </table>
+    <h3>camera control:</h3>
+    <ul>
+        <li>drag: rotate
+        <li>shift+drag: zoom
+        <li>ctrl+drag: pan
+    </ul>
+</body>
+</html>

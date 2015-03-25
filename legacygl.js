@@ -1,31 +1,5 @@
 "use strict";
 
-function project(obj_xyz, modelview, projection, viewport) {
-    // object coordinate to normalized decive coordinate
-    var m = mat4.mul([], projection, modelview);
-    var ndc = vec4.transformMat4([], [obj_xyz[0], obj_xyz[1], obj_xyz[2], 1], m);
-    vec4.scale_ip(ndc, 1 / ndc[3]);
-    // normalized device coordinate to viewport coordinate
-    var win_x = (ndc[0] + 1) * viewport[2] / 2 + viewport[0];
-    var win_y = (ndc[1] + 1) * viewport[3] / 2 + viewport[1];
-    var win_z = (ndc[2] + 1) / 2;
-    return [win_x, win_y, win_z];
-};
-
-function unproject(win_xyz, modelview, projection, viewport) {
-    // viewport coordinate to normalized device coordinate
-    var ndc_x = (win_xyz[0] - viewport[0]) * 2 / viewport[2] - 1;
-    var ndc_y = (win_xyz[1] - viewport[1]) * 2 / viewport[3] - 1;
-    var ndc_z =  win_xyz[2] * 2 - 1;
-    var ndc = [ndc_x, ndc_y, ndc_z, 1];
-    // normalized decive coordinate to object coordinate
-    var m = mat4.mul([], projection, modelview);
-    mat4.invert_ip(m);
-    var obj_xyzw = vec4.transformMat4([], ndc, m);
-    vec4.scale_ip(obj_xyzw, 1 / obj_xyzw[3]);
-    return [obj_xyzw[0], obj_xyzw[1], obj_xyzw[2]];
-};
-
 function get_drawutil(gl, legacygl) {
     var drawutil = {};
     drawutil.xyzaxis = function() {
@@ -136,62 +110,6 @@ function get_drawutil(gl, legacygl) {
         );
     };
     return drawutil;
-};
-
-function get_camera(viewport_width, viewport_height) {
-    var camera = {};
-    camera.eye = [0, 0, 1];
-    camera.center = [0, 0, 0];
-    camera.up = [0, 1, 0];
-    camera.center_to_eye = function() {
-        return vec3.sub([], this.eye, this.center);
-    };
-    camera.eye_to_center = function() {
-        return vec3.sub([], this.center, this.eye);
-    };
-    camera.right = function() {
-        return vec3.normalize([], vec3.cross([], this.eye_to_center(), this.up));
-    };
-    camera.lookAt = function(modelview_matrix) {
-        mat4.lookAt(modelview_matrix, this.eye, this.center, this.up);
-    };
-    camera.mode = "none";
-    camera.is_moving = function() {
-        return this.mode != "none";
-    };
-    camera.start_moving = function(x, y, mode) {
-        this.prev_x = x;
-        this.prev_y = y;
-        this.mode = mode;
-    };
-    camera.move = function(x, y) {
-        var viewport_size = (viewport_width + viewport_height) / 2;
-        if (this.mode == "rotate") {
-            var theta_x = 2 * Math.PI * (x - this.prev_x) / viewport_size;
-            var theta_y = 2 * Math.PI * (y - this.prev_y) / viewport_size;
-            var rot_hrz = quat.setAxisAngle([], this.up, -theta_x);
-            var rot_vrt = quat.setAxisAngle([], this.right(), -theta_y);
-            var rot = quat.mul([], rot_vrt, rot_hrz);
-            this.eye = vec3.add([], this.center, vec3.transformQuat([], this.center_to_eye(), rot));
-            this.up = vec3.transformQuat([], this.up, rot);
-        } else if (this.mode == "pan") {
-            var r = vec3.len(this.center_to_eye());
-            var d0 = vec3.scale([], this.right(), -r * (x - this.prev_x) / viewport_size);
-            var d1 = vec3.scale([], this.up, r * (y - this.prev_y) / viewport_size);
-            var d = vec3.add([], d0, d1);
-            this.eye = vec3.add([], this.eye, d);
-            this.center = vec3.add([], this.center, d);
-        } else if (this.mode == "zoom") {
-            var d = vec3.scale([], this.eye_to_center(), (x - this.prev_x + y - this.prev_y) / viewport_size);
-            this.eye = vec3.add([], this.eye, d);
-        }
-        this.prev_x = x;
-        this.prev_y = y;
-    };
-    camera.finish_moving = function() {
-        this.mode = "none";
-    };
-    return camera;
 };
 
 function get_shader(gl, vertex_shader_src, fragment_shader_src) {
