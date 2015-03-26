@@ -1,7 +1,7 @@
 # legacygl.js #
 
 **legacygl.js** is a small library based on WebGL for enabling the good-old-days legacy 
-OpenGL style coding using the deprecated APIs (e.g., glBegin, glColor3d, glTexCoord2d, glPushMatrix).
+OpenGL style coding using the deprecated APIs (e.g., glBegin, glPushMatrix, GL_QUADS, glNewList).
 
 ### Hello World 3D ###
 
