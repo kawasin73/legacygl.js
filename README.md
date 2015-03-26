@@ -5,6 +5,9 @@ OpenGL style coding using deprecated APIs (e.g., glBegin, glColor3d, glTexCoord2
 
 ### WebGL Hello World ###
 
+### examples ###
+* [hello world 3D](./examples/hello3d.html)
+
 ### Documentation ###
 * Tutorial: Shader Variables
 
