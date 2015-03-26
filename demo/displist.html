@@ -1,0 +1,134 @@
+<html>
+<head>
+<title>legacygl.js Demo: Display List</title>
+<script src="../gl-matrix.js"></script>
+<script src="../gl-matrix-util.js"></script>
+<script src="../legacygl.js"></script>
+<script src="../drawutil.js"></script>
+<script src="../camera.js"></script>
+<script src="../util.js"></script>
+<script type="text/javascript">
+var gl;
+var canvas;
+var legacygl;
+var drawutil;
+var camera;
+var displist;
+var mesh;
+
+function add_triangles() {
+    var n = 2 * (mesh.faces.length / 3 + 10);
+    for (var i = 0; i < n; ++i) {
+        var offset = vec3.random([], 20);
+        for (var j = 0; j < 3; ++j) {
+            var v = vec3.add_ip(vec3.random([], 1), offset);
+            for (var k = 0; k < 3; ++k)
+                mesh.vertices.push(v[k]);
+            mesh.faces.push(mesh.faces.length);
+        }
+    }
+};
+
+function draw() {
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    // projection and camera position
+    mat4.perspective(legacygl.uniforms.projection.value, Math.PI / 6, canvas.aspect_ratio(), 0.1, 1000);
+    camera.lookAt(legacygl.uniforms.modelview.value);
+    legacygl.set_uniforms();
+    // draw zx-grid
+    legacygl.color(0.5, 0.5, 0.5);
+    drawutil.zxgrid(50);
+    // draw quad
+    mat4.rotateY_ip(legacygl.uniforms.modelview.value, 1.1);
+    legacygl.set_uniforms();
+    var drawfunc = function() {
+        legacygl.color(0, 0.7, 1);
+        drawutil.trimesh("fill", mesh.vertices, mesh.faces);
+        legacygl.color(0, 0, 0);
+        drawutil.trimesh("line", mesh.vertices, mesh.faces);
+    };
+    if (document.getElementById("input_use_displist").checked)
+        displist.draw(drawfunc);
+    else
+        drawfunc();
+};
+function init() {
+    // OpenGL context
+    canvas = document.getElementById("canvas");
+    gl = canvas.getContext("experimental-webgl");
+    if (!gl)
+        alert("Could not initialize WebGL!");
+    var vertex_shader_src = "\
+        attribute vec3 a_vertex;\
+        attribute vec3 a_color;\
+        varying vec3 v_color;\
+        uniform mat4 u_modelview;\
+        uniform mat4 u_projection;\
+        void main(void) {\
+            gl_Position = u_projection * u_modelview * vec4(a_vertex, 1.0);\
+            v_color = a_color;\
+        }\
+        ";
+    var fragment_shader_src = "\
+        precision mediump float;\
+        varying vec3 v_color;\
+        void main(void) {\
+            gl_FragColor = vec4(v_color, 1.0);\
+        }\
+        ";
+    legacygl = get_legacygl(gl, vertex_shader_src, fragment_shader_src);
+    legacygl.add_uniform("modelview", "Matrix4f");
+    legacygl.add_uniform("projection", "Matrix4f");
+    legacygl.add_vertex_attribute("color", 3);
+    displist = legacygl.displist_wrapper("displist");
+    drawutil = get_drawutil(gl, legacygl);
+    camera = get_camera(canvas.width);
+    camera.eye = [40, 20, 30];
+    mesh = { vertices: [], faces: [] };
+    add_triangles();
+    // event handlers
+    canvas.onmousedown = function(evt) {
+        camera.start_moving(this.get_mousepos(evt), evt.shiftKey ? "zoom" : evt.ctrlKey ? "pan" : "rotate");
+    };
+    canvas.onmousemove = function(evt) {
+        if (camera.is_moving()) {
+            camera.move(this.get_mousepos(evt));
+            draw();
+        }
+    };
+    document.onmouseup = function(evt) {
+        if (camera.is_moving())
+            camera.finish_moving();
+    };
+    document.getElementById("input_use_displist").onchange = function(evt) {
+        draw();
+    };
+    document.getElementById("button_invalidate_displist").onclick = function(evt) {
+        displist.invalidate();
+        draw();
+    };
+    document.getElementById("button_add_objects").onclick = function(evt) {
+        add_triangles();
+        draw();
+    };
+    // init OpenGL settings
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.enable(gl.DEPTH_TEST);
+    gl.clearColor(1, 1, 1, 1);
+};
+</script>
+</head>
+<body onload="init(); draw();">
+    <h2>legacygl.js Demo: Display List</h2>
+    <canvas id="canvas" width="640" height="480" style="border:1px solid #000000;"></canvas>
+    <div>Use Display List: <input id="input_use_displist" type="checkbox" checked></div>
+    <div><button id="button_invalidate_displist">Invalidate Display List</button></div>
+    <div><button id="button_add_objects">Add Triangles</button></div>
+    <h3>Camera Control:</h3>
+    <ul>
+        <li>Drag: Rotate</li>
+        <li>Shift+Drag: Zoom</li>
+        <li>Ctrl+Drag: Pan</li>
+    </ul>
+</body>
+</html>

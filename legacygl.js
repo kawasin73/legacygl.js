@@ -74,9 +74,8 @@ function get_legacygl(gl, vertex_shader_src, fragment_shader_src) {
             var func_name = "uniform" + type;
             if (type != "1f" && type != "1i")
                 func_name += "v";
-            if (type == "Matrix2f" || type == "Matrix3f" || type == "Matrix4f") {
+            if (type == "Matrix2f" || type == "Matrix3f" || type == "Matrix4f")
                 gl[func_name](this.uniforms[name].location, false, this.uniforms[name].value);
-            }
             else
                 gl[func_name](this.uniforms[name].location, this.uniforms[name].value);
         }
@@ -140,12 +139,96 @@ function get_legacygl(gl, vertex_shader_src, fragment_shader_src) {
             gl.vertexAttribPointer(vertex_attribute.location, vertex_attribute.size, gl.FLOAT, false, 0, 0);
         });
         // emulate GL_QUADS
-        gl.drawArrays(this.mode == this.QUADS ? gl.TRIANGLES : this.mode, 0, this.vertex_attributes[0].array.length / 3);
+        var num_vertices = this.vertex_attributes[0].array.length / 3;
+        gl.drawArrays(this.mode == this.QUADS ? gl.TRIANGLES : this.mode, 0, num_vertices);
         this.vertex_attributes.forEach(function(vertex_attribute) {
             gl.deleteBuffer(vertex_attribute.buffer);
         });
+        // display list
+        if (this.current_displist_name) {
+            var displist = this.displists[this.current_displist_name];
+            // append array data
+            for (var i = 0; i < this.vertex_attributes.length; ++i) {
+                var vertex_attribute = this.vertex_attributes[i];
+                for (var j = 0; j < num_vertices * vertex_attribute.size; ++j)
+                    displist.copied_arrays[i].push(vertex_attribute.array[j]);
+            }
+            var drawcall = {
+                mode: this.mode,
+                num_vertices: num_vertices
+            };
+            displist.drawcalls.push(drawcall);
+        }
     };
     // emulate GL_QUADS
     legacygl.QUADS = "GL_QUADS";
+    // display list
+    legacygl.displists = {};
+    legacygl.current_displist_name = null;
+    legacygl.newList = function(name) {
+        if (this.displists[name]) {
+            // delete if exists
+            for (var i = 0; i < this.vertex_attributes.length; ++i)
+                gl.deleteBuffer(this.displists[name].copied_buffers[i]);
+            delete this.displists[name];
+        }
+        var displist = {
+            copied_arrays : [],
+            copied_buffers: [],
+            drawcalls     : [],
+        };
+        // make an empty array for each attribute
+        for (var i = 0; i < this.vertex_attributes.length; ++i)
+            displist.copied_arrays.push([]);
+        this.displists[name] = displist;
+        this.current_displist_name = name;
+    };
+    legacygl.endList = function() {
+        var displist = this.displists[this.current_displist_name];
+        // make a buffer for each attribute
+        for (var i = 0; i < this.vertex_attributes.length; ++i) {
+            var copied_buffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, copied_buffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(displist.copied_arrays[i]), gl.STATIC_DRAW);
+            displist.copied_buffers.push(copied_buffer);
+        }
+        this.current_displist_name = null;
+    };
+    legacygl.callList = function(name) {
+        var displist = this.displists[name];
+        if (!displist)
+            return;
+        for (var i = 0; i < this.vertex_attributes.length; ++i) {
+            var vertex_attribute = this.vertex_attributes[i];
+            gl.bindBuffer(gl.ARRAY_BUFFER, displist.copied_buffers[i]);
+            gl.vertexAttribPointer(vertex_attribute.location, vertex_attribute.size, gl.FLOAT, false, 0, 0);
+        };
+        var offset = 0;
+        displist.drawcalls.forEach(function(drawcall) {
+            var mode = drawcall.mode == legacygl.QUADS ? gl.TRIANGLES : drawcall.mode;
+            gl.drawArrays(mode, offset, drawcall.num_vertices);
+            offset += drawcall.num_vertices;
+        });
+    };
+    // wrapper
+    legacygl.displist_wrapper = function(name) {
+        var wrapper = {};
+        wrapper.is_valid = false;
+        var legacygl = this;
+        wrapper.draw = function(drawfunc) {
+            if (!this.is_valid) {
+                legacygl.newList(name);
+                drawfunc();
+                legacygl.endList();
+                this.is_valid = true;
+            } else {
+                legacygl.callList(name);
+            }
+        };
+        wrapper.invalidate = function() {
+            this.is_valid = false;
+        };
+        return wrapper;
+    };
     return legacygl;
-}
+};
