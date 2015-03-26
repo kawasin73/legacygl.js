@@ -1,10 +1,10 @@
 <html>
-
 <head>
-<title>legacygl.js demo: pick</title>
+<title>legacygl.js Demo: Pick/Move Objects in 3D</title>
 <script src="../gl-matrix.js"></script>
 <script src="../gl-matrix-util.js"></script>
 <script src="../legacygl.js"></script>
+<script src="../drawutil.js"></script>
 <script src="../camera.js"></script>
 <script src="../util.js"></script>
 <script type="text/javascript">
@@ -21,15 +21,21 @@ var plane_origin;
 var plane_normal;
 
 function draw() {
-    if (shader.uniforms.show_depth.value)
+    if (legacygl.uniforms.show_depth.value)
         gl.clearColor(0, 0, 0, 1);
     else
         gl.clearColor(1, 1, 1, 1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    mat4.perspective(shader.uniforms.projection.value, 30 * Math.PI / 180, canvas.width / canvas.height, shader.uniforms.znear.value, shader.uniforms.zfar.value);
-    var modelview = shader.uniforms.modelview;
+    // projection & camera position
+    mat4.perspective(legacygl.uniforms.projection.value, 
+                    Math.PI / 6,
+                    canvas.width / canvas.height,
+                    legacygl.uniforms.znear.value,
+                    legacygl.uniforms.zfar.value);
+    var modelview = legacygl.uniforms.modelview;
     camera.lookAt(modelview.value);
-    shader.set_uniforms();
+    legacygl.set_uniforms();
+    // zx-grid
     legacygl.color(0.5, 0.5, 0.5);
     drawutil.zxgrid(50);
     // objects
@@ -37,7 +43,7 @@ function draw() {
         modelview.push();
         mat4.translate_ip(modelview.value, objects[i].position);
         mat4.scale_ip(modelview.value, [objects[i].scale, objects[i].scale, objects[i].scale]);
-        shader.set_uniforms();
+        legacygl.set_uniforms();
         if (i == selected_index)
             legacygl.color(1, 0, 0);
         else
@@ -54,7 +60,6 @@ function init() {
     gl = canvas.getContext("experimental-webgl");
     if (!gl)
         alert("Could not initialise WebGL, sorry :-(");
-    // set shader
     var vertex_shader_src = "\
         attribute vec3 a_vertex;\
         attribute vec3 a_color;\
@@ -86,19 +91,16 @@ function init() {
                 gl_FragColor = vec4(v_color, 1.0);\
         }\
         ";
-    shader = get_shader(gl, vertex_shader_src, fragment_shader_src);
-    shader.add_uniform("modelview", "Matrix4f");
-    shader.add_uniform("projection", "Matrix4f");
-    shader.add_uniform("znear", "1f");
-    shader.add_uniform("zfar", "1f");
-    shader.add_uniform("show_depth", "1i");
-    shader.uniforms.znear.value = 1;
-    shader.uniforms.zfar.value = 1000;
-    // utilities
-    legacygl = get_legacygl(gl, shader.program);
+    legacygl = get_legacygl(gl, vertex_shader_src, fragment_shader_src);
+    legacygl.add_uniform("modelview", "Matrix4f");
+    legacygl.add_uniform("projection", "Matrix4f");
+    legacygl.add_uniform("znear", "1f");
+    legacygl.add_uniform("zfar", "1f");
+    legacygl.add_uniform("show_depth", "1i");
+    legacygl.uniforms.znear.value = 1;
+    legacygl.uniforms.zfar.value = 1000;
     legacygl.add_vertex_attribute("color", 3);
     drawutil = get_drawutil(gl, legacygl);
-    // app data
     camera = get_camera(canvas.width);
     camera.eye = [20, 30, 30];
     objects = [
@@ -119,8 +121,8 @@ function init() {
         var viewport = [0, 0, canvas.width, canvas.height];
         for (var i = 0; i < objects.length; ++i) {
             var object_win = project(objects[i].position, 
-                                     shader.uniforms.modelview.value,
-                                     shader.uniforms.projection.value,
+                                     legacygl.uniforms.modelview.value,
+                                     legacygl.uniforms.projection.value,
                                      viewport);
             if (vec2.dist(mouse_win, object_win) < 20)
                 candidates.push({ dist: vec3.dist(camera.eye, objects[i].position), index:i });
@@ -147,8 +149,8 @@ function init() {
             var viewport = [0, 0, canvas.width, canvas.height];
             mouse_win.push(1);
             var mouse_obj = unproject(mouse_win, 
-                                      shader.uniforms.modelview.value,
-                                      shader.uniforms.projection.value,
+                                      legacygl.uniforms.modelview.value,
+                                      legacygl.uniforms.projection.value,
                                       viewport);
             var eye_to_mouse = vec3.sub([], mouse_obj, camera.eye);
             var eye_to_origin = vec3.sub([], plane_origin, camera.eye);
@@ -184,22 +186,19 @@ function init() {
     gl.clearColor(1, 1, 1, 1);
 };
 </script>
-
-
 </head>
-
 <body onload="init(); draw();">
-    <h2>legacygl.js demo: object picking</h2>
+    <h2>legacygl.js Demo: Pick/Move Objects in 3D</h2>
     <canvas id="canvas" width="640" height="480" style="border:1px solid #000000"></canvas>
-    <div>scaling for selected object: <input type="number" id="input_scaling" step="0.1" /></div>
-    <div><button id="button_add">add object</button></div>
-    <h3>usage:</h3>
+    <div>Scaling for Selected Object: <input type="number" id="input_scaling" step="0.1" /></div>
+    <div><button id="button_add">Add Object</button></div>
+    <h3>Usage:</h3>
     <ul>
-        <li>click and drag: object pick and move</li>
-        <li>alt+drag: camera rotate</li>
-        <li>alt+shift+drag: camera zoom</li>
-        <li>alt+ctrl+drag: camera pan</li>
+        <li>Click and Drag: Pick and Move Object</li>
+        <li>Alt+Drag: Camera Rotate</li>
+        <li>Alt+Shift+drag: Camera Zoom</li>
+        <li>Alt+Ctrl+drag: Camera Pan</li>
     </ul>
+    <p>Note: Don't scroll the page, otherwise the mouse cursor position detection gets messed up:-)</p>
 </body>
-
 </html>
