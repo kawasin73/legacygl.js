@@ -1,6 +1,7 @@
 <html>
+
 <head>
-<title>legacygl.js Demo: Hello World 3D</title>
+<title>legacygl.js Demo: Hello World 2D</title>
 <script src="../gl-matrix.js"></script>
 <script src="../gl-matrix-util.js"></script>
 <script src="../legacygl.js"></script>
@@ -15,23 +16,35 @@ var drawutil;
 var camera;
 
 function draw() {
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.clear(gl.COLOR_BUFFER_BIT);
     // projection and camera position
-    mat4.perspective(legacygl.uniforms.projection.value, 30 * Math.PI / 180, canvas.width / canvas.height, 0.1, 1000);
+    var eyez = camera.eye[2];
+    mat4.perspective(legacygl.uniforms.projection.value, Math.PI / 6, canvas.width / canvas.height, eyez * 0.9, eyez * 1.1);
     camera.lookAt(legacygl.uniforms.modelview.value);
     legacygl.set_uniforms();
-    // draw zx-grid
+    // xy-grid
     legacygl.color(0.5, 0.5, 0.5);
-    drawutil.zxgrid(50);
-    // draw quad
-    mat4.rotateY_ip(legacygl.uniforms.modelview.value, 1.1);
-    legacygl.set_uniforms();
-    legacygl.color(0, 0.7, 1);
+    gl.lineWidth(1);
+    drawutil.xygrid(100);
+    gl.lineWidth(2);
+    legacygl.begin(gl.LINES);
+    legacygl.color(1, 0, 0);  legacygl.vertex(-100, 0, 0);    legacygl.vertex(100, 0, 0);
+    legacygl.color(0, 1, 0);  legacygl.vertex(0, -100, 0);    legacygl.vertex(0, 100, 0);
+    legacygl.end();
+    // closed polygon line
+    gl.lineWidth(2);
+    legacygl.color(0.8, 0.2, 0.7);
+    legacygl.begin(gl.LINE_LOOP);
+    legacygl.vertex(-3, 2, 0);
+    legacygl.vertex(-2, 5, 0);
+    legacygl.vertex(-1, 1, 0);
+    legacygl.end();
+    // quad
     legacygl.begin(legacygl.QUADS);
-    legacygl.vertex(1, 0, 0);
-    legacygl.vertex(0.5, 1, 0);
-    legacygl.vertex(0, 1, 0.5);
-    legacygl.vertex(0, 0, 1);
+    legacygl.color(0.9, 0.5, 0.2);      legacygl.vertex(3, 4, 0);
+    legacygl.color(0.1, 0.8, 0.6);      legacygl.vertex(2, 7, 0);
+    legacygl.color(0.9, 0.1, 0.5);      legacygl.vertex(-1, 5, 0);
+    legacygl.color(0.9, 0.1, 0.5);      legacygl.vertex( 1, 3, 0);
     legacygl.end();
 };
 function init() {
@@ -64,10 +77,10 @@ function init() {
     legacygl.add_vertex_attribute("color", 3);
     drawutil = get_drawutil(gl, legacygl);
     camera = get_camera(canvas.width);
-    camera.eye = [40, 20, 30];
+    camera.eye = [0, 0, 50];
     // event handlers
     canvas.onmousedown = function(evt) {
-        camera.start_moving(this.get_mousepos(evt), evt.shiftKey ? "zoom" : evt.ctrlKey ? "pan" : "rotate");
+        camera.start_moving(this.get_mousepos(evt), evt.shiftKey ? "zoom" : "pan");
     };
     canvas.onmousemove = function(evt) {
         if (camera.is_moving()) {
@@ -81,19 +94,17 @@ function init() {
     };
     // init OpenGL settings
     gl.viewport(0, 0, canvas.width, canvas.height);
-    gl.enable(gl.DEPTH_TEST);
     gl.clearColor(1, 1, 1, 1);
 };
 </script>
 </head>
 <body onload="init(); draw();">
-    <h2>legacygl.js Demo: Hello World 3D</h2>
+    <h2>legacygl.js demo: Hello World 2D</h2>
     <canvas id="canvas" width="640" height="480" style="border:1px solid #000000;"></canvas>
     <h3>Camera Control:</h3>
     <ul>
-        <li>Drag: Rotate</li>
+        <li>Drag: Pan</li>
         <li>Shift+Drag: Zoom</li>
-        <li>Ctrl+Drag: Pan</li>
     </ul>
 </body>
 </html>
