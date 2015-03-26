@@ -25,7 +25,8 @@ function draw() {
     else
         gl.disable(gl.POLYGON_OFFSET_FILL);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    mat4.perspective(legacygl.uniforms.projection.value, 30 * Math.PI / 180, canvas.width / canvas.height, legacygl.uniforms.znear.value, legacygl.uniforms.zfar.value);
+    mat4.perspective(legacygl.uniforms.projection.value, Math.PI / 6, canvas.aspect_ratio(),
+                     legacygl.uniforms.znear.value, legacygl.uniforms.zfar.value);
     var modelview = legacygl.uniforms.modelview;
     camera.lookAt(modelview.value);
     legacygl.set_uniforms();
@@ -110,18 +111,18 @@ function init() {
             camera.finish_moving();
     };
     document.getElementById("input_show_zbuffer").onchange = function(evt) {
-        shader.uniforms.show_zbuffer.value = 1 - shader.uniforms.show_zbuffer.value;
+        legacygl.uniforms.show_zbuffer.value = 1 - legacygl.uniforms.show_zbuffer.value;
         draw();
     };
     document.getElementById("input_use_polygonoffset").onchange = function(evt) {
         draw();
     };
     document.getElementById("input_znear").onchange = function(evt) {
-        shader.uniforms.znear.value = Number(evt.target.value);
+        legacygl.uniforms.znear.value = Number(evt.target.value);
         draw();
     };
     document.getElementById("input_zfar").onchange = function(evt) {
-        shader.uniforms.zfar.value = Number(evt.target.value);
+        legacygl.uniforms.zfar.value = Number(evt.target.value);
         draw();
     };
     // init OpenGL settings

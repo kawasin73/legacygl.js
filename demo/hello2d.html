@@ -19,7 +19,7 @@ function draw() {
     gl.clear(gl.COLOR_BUFFER_BIT);
     // projection and camera position
     var eyez = camera.eye[2];
-    mat4.perspective(legacygl.uniforms.projection.value, Math.PI / 6, canvas.width / canvas.height, eyez * 0.9, eyez * 1.1);
+    mat4.perspective(legacygl.uniforms.projection.value, Math.PI / 6, canvas.aspect_ratio(), eyez * 0.9, eyez * 1.1);
     camera.lookAt(legacygl.uniforms.modelview.value);
     legacygl.set_uniforms();
     // xy-grid
@@ -99,7 +99,7 @@ function init() {
 </script>
 </head>
 <body onload="init(); draw();">
-    <h2>legacygl.js demo: Hello World 2D</h2>
+    <h2>legacygl.js Demo: Hello World 2D</h2>
     <canvas id="canvas" width="640" height="480" style="border:1px solid #000000;"></canvas>
     <h3>Camera Control:</h3>
     <ul>

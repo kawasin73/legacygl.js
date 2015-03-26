@@ -17,7 +17,7 @@ var camera;
 function draw() {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     // projection and camera position
-    mat4.perspective(legacygl.uniforms.projection.value, 30 * Math.PI / 180, canvas.width / canvas.height, 0.1, 1000);
+    mat4.perspective(legacygl.uniforms.projection.value, Math.PI / 6, canvas.aspect_ratio(), 0.1, 1000);
     camera.lookAt(legacygl.uniforms.modelview.value);
     legacygl.set_uniforms();
     // draw zx-grid

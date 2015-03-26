@@ -40,3 +40,6 @@ HTMLCanvasElement.prototype.get_mousepos = function(event) {
     var y = event.pageY - totalOffsetY;
     return [x, this.height - y];
 };
+HTMLCanvasElement.prototype.aspect_ratio = function() {
+    return this.width / this.height;
+};
