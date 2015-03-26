@@ -25,6 +25,8 @@ function get_camera(viewport_width) {
     camera.start_moving = function(mousepos, mode) {
         vec2.copy(this.prevpos, mousepos);
         this.mode = mode;
+        // correct up vector
+        this.up = vec3.normalize([], vec3.cross([], this.right(), this.eye_to_center()));
     };
     camera.move = function(mousepos) {
         var diff = vec2.scale_ip(vec2.sub([], mousepos, this.prevpos), 1 / viewport_width);
@@ -33,18 +35,19 @@ function get_camera(viewport_width) {
             var rot_hrz = quat.setAxisAngle([], this.up,      -theta[0]);
             var rot_vrt = quat.setAxisAngle([], this.right(),  theta[1]);
             var rot = quat.mul([], rot_vrt, rot_hrz);
-            this.eye = vec3.add([], this.center, vec3.transformQuat([], this.center_to_eye(), rot));
-            this.up = vec3.transformQuat([], this.up, rot);
+            this.eye = vec3.transformQuat([], this.center_to_eye(), rot);
+            vec3.add_ip(this.eye, this.center);
+            vec3.transformQuat_ip(this.up, rot);
         } else if (this.mode == "pan") {
             var s = vec2.scale([], diff, vec3.len(this.center_to_eye()));
             var d0 = vec3.scale([], this.right(), -s[0]);
             var d1 = vec3.scale([], this.up,      -s[1]);
             var d = vec3.add([], d0, d1);
-            this.eye    = vec3.add([], this.eye,    d);
-            this.center = vec3.add([], this.center, d);
+            vec3.add_ip(this.eye,    d);
+            vec3.add_ip(this.center, d);
         } else if (this.mode == "zoom") {
             var d = vec3.scale([], this.eye_to_center(), diff[0] - diff[1]);
-            this.eye = vec3.add([], this.eye, d);
+            vec3.add_ip(this.eye, d);
         }
         vec2.copy(this.prevpos, mousepos);
     };
