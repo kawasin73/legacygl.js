@@ -1,7 +1,7 @@
 # legacygl.js #
 
-**legacygl.js** is a small library based on WebGL with the aim of enabling a good-old-days legacy 
-OpenGL style coding using deprecated APIs (e.g., glBegin, glColor3d, glTexCoord2d, glPushMatrix).
+**legacygl.js** is a small library based on WebGL for enabling the good-old-days legacy 
+OpenGL style coding using the deprecated APIs (e.g., glBegin, glColor3d, glTexCoord2d, glPushMatrix).
 
 ### Hello World 3D ###
 
@@ -110,13 +110,17 @@ function init() {
 http://htmlpreview.github.io/?https://bitbucket.org/kenshi84/legacygl.js/raw/86fef05e52e59842e07525aa1366368322311edb/demo/hello3d.html
 
 ### Demos ###
-- Hello World 2D: http://htmlpreview.github.io/?- Z-Buffer: http://htmlpreview.github.io/?https://bitbucket.org/kenshi84/legacygl.js/raw/86fef05e52e59842e07525aa1366368322311edb/demo/hello2d.html
-- Pick/Move Objects in 3D: http://htmlpreview.github.io/?https://bitbucket.org/kenshi84/legacygl.js/raw/86fef05e52e59842e07525aa1366368322311edb/demo/pick3d.html
-- Pick/Move Objects in 2D: http://htmlpreview.github.io/?https://bitbucket.org/kenshi84/legacygl.js/raw/86fef05e52e59842e07525aa1366368322311edb/demo/pick2d.html
-- Z-Buffer: http://htmlpreview.github.io/?- Z-Buffer: http://htmlpreview.github.io/?https://bitbucket.org/kenshi84/legacygl.js/raw/86fef05e52e59842e07525aa1366368322311edb/demo/z-buffer.html
+- Hello World 2D
+    - http://htmlpreview.github.io/?https://bitbucket.org/kenshi84/legacygl.js/raw/86fef05e52e59842e07525aa1366368322311edb/demo/hello2d.html
+- Pick/Move Objects in 3D
+    - http://htmlpreview.github.io/?https://bitbucket.org/kenshi84/legacygl.js/raw/86fef05e52e59842e07525aa1366368322311edb/demo/pick3d.html
+- Pick/Move Objects in 2D
+    - http://htmlpreview.github.io/?https://bitbucket.org/kenshi84/legacygl.js/raw/86fef05e52e59842e07525aa1366368322311edb/demo/pick2d.html
+- Z-Buffer
+    - http://htmlpreview.github.io/?https://bitbucket.org/kenshi84/legacygl.js/raw/86fef05e52e59842e07525aa1366368322311edb/demo/z-buffer.html
 
-### Documentation ###
-* Tutorial: Shader Variables
+### Tutorials ###
+- Managing Shader Variables
 
 ### Contact:###
 [Kenshi Takayama](http://research.nii.ac.jp/~takayama/)
