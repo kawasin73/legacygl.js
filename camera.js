@@ -1,6 +1,6 @@
 "use strict";
 
-function get_camera(viewport_width, viewport_height) {
+function get_camera(viewport_width) {
     var camera = {};
     camera.eye = [0, 0, 1];
     camera.center = [0, 0, 0];
@@ -21,34 +21,32 @@ function get_camera(viewport_width, viewport_height) {
     camera.is_moving = function() {
         return this.mode != "none";
     };
-    camera.start_moving = function(x, y, mode) {
-        this.prev_x = x;
-        this.prev_y = y;
+    camera.prevpos = vec2.create();
+    camera.start_moving = function(mousepos, mode) {
+        vec2.copy(this.prevpos, mousepos);
         this.mode = mode;
     };
-    camera.move = function(x, y) {
-        var viewport_size = (viewport_width + viewport_height) / 2;
+    camera.move = function(mousepos) {
+        var diff = vec2.scale_ip(vec2.sub([], mousepos, this.prevpos), 1 / viewport_width);
         if (this.mode == "rotate") {
-            var theta_x = 2 * Math.PI * (x - this.prev_x) / viewport_size;
-            var theta_y = 2 * Math.PI * (y - this.prev_y) / viewport_size;
-            var rot_hrz = quat.setAxisAngle([], this.up, -theta_x);
-            var rot_vrt = quat.setAxisAngle([], this.right(), -theta_y);
+            var theta = vec2.scale([], diff, 1.7 * Math.PI);
+            var rot_hrz = quat.setAxisAngle([], this.up,      -theta[0]);
+            var rot_vrt = quat.setAxisAngle([], this.right(),  theta[1]);
             var rot = quat.mul([], rot_vrt, rot_hrz);
             this.eye = vec3.add([], this.center, vec3.transformQuat([], this.center_to_eye(), rot));
             this.up = vec3.transformQuat([], this.up, rot);
         } else if (this.mode == "pan") {
-            var r = vec3.len(this.center_to_eye());
-            var d0 = vec3.scale([], this.right(), -r * (x - this.prev_x) / viewport_size);
-            var d1 = vec3.scale([], this.up, r * (y - this.prev_y) / viewport_size);
+            var s = vec2.scale([], diff, vec3.len(this.center_to_eye()));
+            var d0 = vec3.scale([], this.right(), -s[0]);
+            var d1 = vec3.scale([], this.up,      -s[1]);
             var d = vec3.add([], d0, d1);
-            this.eye = vec3.add([], this.eye, d);
+            this.eye    = vec3.add([], this.eye,    d);
             this.center = vec3.add([], this.center, d);
         } else if (this.mode == "zoom") {
-            var d = vec3.scale([], this.eye_to_center(), (x - this.prev_x + y - this.prev_y) / viewport_size);
+            var d = vec3.scale([], this.eye_to_center(), diff[0] - diff[1]);
             this.eye = vec3.add([], this.eye, d);
         }
-        this.prev_x = x;
-        this.prev_y = y;
+        vec2.copy(this.prevpos, mousepos);
     };
     camera.finish_moving = function() {
         this.mode = "none";

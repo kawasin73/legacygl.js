@@ -39,14 +39,6 @@ function get_drawutil(gl, legacygl) {
         }
         legacygl.end();
     };
-    drawutil.fill_and_line = function(drawfunc, fill_color, line_color) {
-        gl.enable(gl.POLYGON_OFFSET_FILL);
-        legacygl.color(fill_color[0], fill_color[1], fill_color[2]);
-        drawfunc("fill");
-        gl.disable(gl.POLYGON_OFFSET_FILL);
-        legacygl.color(line_color[0], line_color[1], line_color[2]);
-        drawfunc("line");
-    };
     drawutil.quadmesh = function(mode, vertices, faces) {
         legacygl.begin(mode == "line" ? gl.LINES : legacygl.QUADS);
         for (var f = 0; f < faces.length / 4; ++f) {

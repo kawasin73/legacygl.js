@@ -101,11 +101,11 @@ function init() {
     camera.eye = [40, 20, 30];
     // event handlers
     canvas.onmousedown = function(evt) {
-        camera.start_moving(evt.clientX, evt.clientY, evt.shiftKey ? "zoom" : evt.ctrlKey ? "pan" : "rotate");
+        camera.start_moving(this.get_mousepos(evt), evt.shiftKey ? "zoom" : evt.ctrlKey ? "pan" : "rotate");
     };
-    document.onmousemove = function(evt) {
+    canvas.onmousemove = function(evt) {
         if (camera.is_moving()) {
-            camera.move(evt.clientX, evt.clientY);
+            camera.move(this.get_mousepos(evt));
             draw();
         }
     };

@@ -25,3 +25,18 @@ function unproject(win_xyz, modelview, projection, viewport) {
     vec4.scale_ip(obj_xyzw, 1 / obj_xyzw[3]);
     return [obj_xyzw[0], obj_xyzw[1], obj_xyzw[2]];
 };
+
+HTMLCanvasElement.prototype.get_mousepos = function(event) {
+    // http://stackoverflow.com/questions/55677/how-do-i-get-the-coordinates-of-a-mouse-click-on-a-canvas-element
+    var totalOffsetX = 0;
+    var totalOffsetY = 0;
+    var currentElement = this;
+    do{
+        totalOffsetX += currentElement.offsetLeft - currentElement.scrollLeft;
+        totalOffsetY += currentElement.offsetTop - currentElement.scrollTop;
+    }
+    while(currentElement = currentElement.offsetParent)
+    var x = event.pageX - totalOffsetX;
+    var y = event.pageY - totalOffsetY;
+    return [x, this.height - y];
+};
