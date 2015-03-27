@@ -140,7 +140,8 @@ function get_legacygl(gl, vertex_shader_src, fragment_shader_src) {
         });
         // emulate GL_QUADS
         var num_vertices = this.vertex_attributes[0].array.length / 3;
-        gl.drawArrays(this.mode == this.QUADS ? gl.TRIANGLES : this.mode, 0, num_vertices);
+        var mode = this.mode == this.QUADS ? gl.TRIANGLES : this.mode;
+        gl.drawArrays(mode, 0, num_vertices);
         this.vertex_attributes.forEach(function(vertex_attribute) {
             gl.deleteBuffer(vertex_attribute.buffer);
         });
@@ -153,11 +154,7 @@ function get_legacygl(gl, vertex_shader_src, fragment_shader_src) {
                 for (var j = 0; j < num_vertices * vertex_attribute.size; ++j)
                     displist.copied_arrays[i].push(vertex_attribute.array[j]);
             }
-            var drawcall = {
-                mode: this.mode,
-                num_vertices: num_vertices
-            };
-            displist.drawcalls.push(drawcall);
+            displist.drawcalls.push({ mode: mode, num_vertices: num_vertices });
         }
     };
     // emulate GL_QUADS
@@ -205,8 +202,7 @@ function get_legacygl(gl, vertex_shader_src, fragment_shader_src) {
         };
         var offset = 0;
         displist.drawcalls.forEach(function(drawcall) {
-            var mode = drawcall.mode == legacygl.QUADS ? gl.TRIANGLES : drawcall.mode;
-            gl.drawArrays(mode, offset, drawcall.num_vertices);
+            gl.drawArrays(drawcall.mode, offset, drawcall.num_vertices);
             offset += drawcall.num_vertices;
         });
     };

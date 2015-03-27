@@ -36,12 +36,12 @@ legacygl.add_uniform("myvec2i", "2i");
 legacygl.add_uniform("mymat4", "Matrix4f");
 ```
 
-This automatically creates an entry for each variable, e.g., `legacygl.myint`, and you can access the actual data on the CPU via `legacygl.myint.value` which is just `int` or `float` for scalars and [glMatrix](http://glmatrix.net) objects otherwise. After setting the values appropriately, you need to send them to the GPU by calling
+This automatically creates an entry for each variable, e.g., `legacygl.myint`, and you can access the actual data on the CPU via `legacygl.myint.value` which is just a number for scalars or a [glMatrix](http://glmatrix.net) object for vectors and matrices. After setting the values as you like, remember to send them to the GPU by calling
 ```
 #!javascript
 legacygl.set_uniforms();
 ```
-before drawing (otherwise the changes don't take effect). `legacygl` also provides a simple push/pop mechanism (much like `glPushMatrix/glPopMatrix`) for each variable:
+before drawing, otherwise the changes don't take effect. `legacygl` also provides a simple push/pop mechanism (much like `glPushMatrix/glPopMatrix`) for each variable:
 ```
 #!javascript
 legacygl.myint.push();
@@ -60,7 +60,7 @@ Each vertex attribute variable is registered to `legacygl` by calling
 #!javascript
 legacygl.add_vertex_attribute(name, size);
 ```
-where `name` is the same one as in the shader code without the prefix `a_`, and `size` is the number of `float`s per vertex. For the above example code, the registration process would be:
+where `name` is the same as the one in the shader code without the prefix `a_`, and `size` is the number of numbers per vertex (e.g., 9 for `mat3`). For the above example code, the registration process would be:
 ```
 #!javascript
 legacygl.add_vertex_attribute("myfloat", 1);
