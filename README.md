@@ -122,7 +122,7 @@ http://htmlpreview.github.io/?https://bitbucket.org/kenshi84/legacygl.js/raw/26b
     - http://htmlpreview.github.io/?https://bitbucket.org/kenshi84/legacygl.js/raw/26be3fab0489dd7694d7b2281f94bec23e65436b/demo/displist.html
 
 ### Tutorials ###
-- [Managing Shader Variables](https://bitbucket.org/kenshi84/legacygl.js/src/34aa375d5d61d24e53785413fdbcbdde0b7f9a5f/doc/tutorial-managing-shader-variables.md)
+- [Managing Shader Variables](https://bitbucket.org/kenshi84/legacygl.js/src/db88c1ffa12aecc04c6fb719eead462a45bfaa5d/doc/tutorial-managing-shader-variables.md)
 
 ### Contact:###
 [Kenshi Takayama](http://research.nii.ac.jp/~takayama/)
