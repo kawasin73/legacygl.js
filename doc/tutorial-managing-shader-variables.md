@@ -36,20 +36,19 @@ legacygl.add_uniform("myvec2i", "2i");
 legacygl.add_uniform("mymat4", "Matrix4f");
 ```
 
-This automatically creates an entry for each variable, e.g., `legacygl.myint`, and you can access the actual data on the CPU via `legacygl.myint.value` which is just a number for scalars or a [glMatrix](http://glmatrix.net) object for vectors and matrices. After setting the values as you like, remember to send them to the GPU by calling
+This automatically creates an entry for each variable, e.g., `legacygl.myint`, and you can access the actual data on the CPU via `legacygl.myint.value` which is just a number for scalars or a [glMatrix](http://glmatrix.net) object for vectors and matrices.
+The transfer of these uniform variables data to GPU occurs when
 ```
 #!javascript
 legacygl.set_uniforms();
 ```
-before drawing, otherwise the changes don't take effect. `legacygl` also provides a simple push/pop mechanism (much like `glPushMatrix/glPopMatrix`) for each variable:
+is called, but this is implicitly called inside `legacygl.begin()` and `legacygl.callList()`, so you don't need to call it yourself. `legacygl` also provides a simple push/pop mechanism (much like `glPushMatrix/glPopMatrix`) for each variable:
 ```
 #!javascript
 legacygl.myint.push();
 legacygl.myint.value = 3;
-legacygl.set_uniforms();
 drawfunc();
 legacygl.myint.pop();
-legacygl.set_uniforms();
 drawfunc();
 ```
 
