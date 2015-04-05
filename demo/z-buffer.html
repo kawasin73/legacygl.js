@@ -29,7 +29,6 @@ function draw() {
                      legacygl.uniforms.znear.value, legacygl.uniforms.zfar.value);
     var modelview = legacygl.uniforms.modelview;
     camera.lookAt(modelview.value);
-    legacygl.set_uniforms();
     // draw zx-grid
     legacygl.color(0.5, 0.5, 0.5);
     legacygl.begin(legacygl.QUADS);
@@ -42,7 +41,6 @@ function draw() {
     drawutil.zxgrid(50);
     // draw cube
     mat4.translate_ip(modelview.value, [1, 5, 2]);
-    legacygl.set_uniforms();
     legacygl.color(0, 0.7, 1);
     drawutil.cube("fill", 10);
     legacygl.color(0, 0, 0);

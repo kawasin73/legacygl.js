@@ -126,6 +126,7 @@ function get_legacygl(gl, vertex_shader_src, fragment_shader_src) {
     };
     // begin and end
     legacygl.begin = function(mode) {
+        this.set_uniforms();
         this.mode = mode;
         this.vertex_attributes.forEach(function(vertex_attribute) {
             vertex_attribute.array = [];
@@ -195,6 +196,7 @@ function get_legacygl(gl, vertex_shader_src, fragment_shader_src) {
         var displist = this.displists[name];
         if (!displist)
             return;
+        this.set_uniforms();
         for (var i = 0; i < this.vertex_attributes.length; ++i) {
             var vertex_attribute = this.vertex_attributes[i];
             gl.bindBuffer(gl.ARRAY_BUFFER, displist.copied_buffers[i]);

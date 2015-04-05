@@ -26,7 +26,6 @@ function draw() {
     mat4.perspective(legacygl.uniforms.projection.value, Math.PI / 6, canvas.aspect_ratio(), 0.1, 1000);
     var modelview = legacygl.uniforms.modelview;
     camera.lookAt(modelview.value);
-    legacygl.set_uniforms();
     // zx-grid
     legacygl.color(0.5, 0.5, 0.5);
     drawutil.zxgrid(50);
@@ -35,7 +34,6 @@ function draw() {
         modelview.push();
         mat4.translate_ip(modelview.value, objects[i].position);
         mat4.scale_ip(modelview.value, [objects[i].scale, objects[i].scale, objects[i].scale]);
-        legacygl.set_uniforms();
         if (i == selected_index)
             legacygl.color(1, 0, 0);
         else

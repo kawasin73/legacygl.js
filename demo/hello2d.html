@@ -21,7 +21,6 @@ function draw() {
     var eyez = camera.eye[2];
     mat4.perspective(legacygl.uniforms.projection.value, Math.PI / 6, canvas.aspect_ratio(), eyez * 0.9, eyez * 1.1);
     camera.lookAt(legacygl.uniforms.modelview.value);
-    legacygl.set_uniforms();
     // xy-grid
     legacygl.color(0.5, 0.5, 0.5);
     gl.lineWidth(1);
