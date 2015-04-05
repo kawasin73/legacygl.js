@@ -105,22 +105,22 @@ function init() {
 </body>
 </html>
 ```
-http://htmlpreview.github.io/?https://bitbucket.org/kenshi84/legacygl.js/raw/ad7f16e3052bc8e3788bf7e656b2ee04c3d527a9/demo/hello3d.html
+http://htmlpreview.github.io/?https://bitbucket.org/kenshi84/legacygl.js/raw/15e6a6f6b6e938319648fbf996edf6475889cc7d/demo/hello3d.html
 
 ### Demos ###
 - Hello World 2D
-    - http://htmlpreview.github.io/?https://bitbucket.org/kenshi84/legacygl.js/raw/ad7f16e3052bc8e3788bf7e656b2ee04c3d527a9/demo/hello2d.html
+    - http://htmlpreview.github.io/?https://bitbucket.org/kenshi84/legacygl.js/raw/15e6a6f6b6e938319648fbf996edf6475889cc7d/demo/hello2d.html
 - Pick/Move Objects in 3D
-    - http://htmlpreview.github.io/?https://bitbucket.org/kenshi84/legacygl.js/raw/ad7f16e3052bc8e3788bf7e656b2ee04c3d527a9/demo/pick3d.html
+    - http://htmlpreview.github.io/?https://bitbucket.org/kenshi84/legacygl.js/raw/15e6a6f6b6e938319648fbf996edf6475889cc7d/demo/pick3d.html
 - Pick/Move Objects in 2D
-    - http://htmlpreview.github.io/?https://bitbucket.org/kenshi84/legacygl.js/raw/ad7f16e3052bc8e3788bf7e656b2ee04c3d527a9/demo/pick2d.html
+    - http://htmlpreview.github.io/?https://bitbucket.org/kenshi84/legacygl.js/raw/15e6a6f6b6e938319648fbf996edf6475889cc7d/demo/pick2d.html
 - Z-Buffer
-    - http://htmlpreview.github.io/?https://bitbucket.org/kenshi84/legacygl.js/raw/ad7f16e3052bc8e3788bf7e656b2ee04c3d527a9/demo/z-buffer.html
+    - http://htmlpreview.github.io/?https://bitbucket.org/kenshi84/legacygl.js/raw/15e6a6f6b6e938319648fbf996edf6475889cc7d/demo/z-buffer.html
 - Display List
-    - http://htmlpreview.github.io/?https://bitbucket.org/kenshi84/legacygl.js/raw/ad7f16e3052bc8e3788bf7e656b2ee04c3d527a9/demo/displist.html
+    - http://htmlpreview.github.io/?https://bitbucket.org/kenshi84/legacygl.js/raw/15e6a6f6b6e938319648fbf996edf6475889cc7d/demo/displist.html
 
 ### Tutorials ###
-- [Managing Shader Variables](https://bitbucket.org/kenshi84/legacygl.js/src/db88c1ffa12aecc04c6fb719eead462a45bfaa5d/doc/tutorial-managing-shader-variables.md)
+- [Managing Shader Variables](https://bitbucket.org/kenshi84/legacygl.js/src/15e6a6f6b6e938319648fbf996edf6475889cc7d/doc/tutorial-managing-shader-variables.md)
 
 ### Contact:###
 [Kenshi Takayama](http://research.nii.ac.jp/~takayama/)
