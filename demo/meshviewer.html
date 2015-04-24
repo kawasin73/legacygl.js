@@ -1,0 +1,154 @@
+<html>
+<head>
+<title id="title">legacygl.js Demo: Mesh Viewer</title>
+<script src="../gl-matrix.js"></script>
+<script src="../gl-matrix-util.js"></script>
+<script src="../numeric-1.2.6.js"></script>
+<script src="../numeric-util.js"></script>
+<script src="../legacygl.js"></script>
+<script src="../drawutil.js"></script>
+<script src="../camera.js"></script>
+<script src="../util.js"></script>
+<script src="../halfedge.js"></script>
+<script src="../meshio.js"></script>
+<script src="../boundingbox.js"></script>
+<script type="text/javascript">
+var gl;
+var canvas;
+var legacygl;
+var displist;
+var drawutil;
+var camera;
+var mesh;
+var bbox;
+
+function draw() {
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    // projection and camera position
+    mat4.perspective(legacygl.uniforms.projection.value, Math.PI / 6, canvas.aspect_ratio(), 0.1, 1000);
+    camera.lookAt(legacygl.uniforms.modelview.value);
+    
+    // draw bounding box
+    if (mesh) {
+        var modelview = legacygl.uniforms.modelview;
+        modelview.push();
+        mat4.translate_ip(modelview.value, bbox.center());
+        mat4.scale_ip(modelview.value, bbox.diagonal());
+        legacygl.color(0.5, 0.5, 0.5);
+        drawutil.cube("line", 1);
+        modelview.pop();
+    }
+    // draw mesh
+    displist.draw(function() {
+        if (!mesh) return;
+        legacygl.color(0, 0.7, 1);
+        legacygl.begin(gl.TRIANGLES);
+        mesh.faces.forEach(function(f) {
+            f.vertices().forEach(function(v){ legacygl.vertex3(v.point); });
+        });
+        legacygl.end();
+        legacygl.color(0, 0.2, 0.5);
+        legacygl.begin(gl.LINES);
+        mesh.edges_forEach(function(e) {
+            var h = e.halfedge;
+            legacygl.vertex3(h.vertex.point);
+            legacygl.vertex3(h.from_vertex().point);
+        });
+        legacygl.end();
+    });
+};
+function redraw() {
+    displist.invalidate();
+    draw();
+};
+function init() {
+    // OpenGL context
+    canvas = document.getElementById("canvas");
+    gl = canvas.getContext("experimental-webgl");
+    if (!gl)
+        alert("Could not initialize WebGL!");
+    var vertex_shader_src = "\
+        attribute vec3 a_vertex;\
+        attribute vec3 a_color;\
+        varying vec3 v_color;\
+        uniform mat4 u_modelview;\
+        uniform mat4 u_projection;\
+        void main(void) {\
+            gl_Position = u_projection * u_modelview * vec4(a_vertex, 1.0);\
+            v_color = a_color;\
+        }\
+        ";
+    var fragment_shader_src = "\
+        precision mediump float;\
+        varying vec3 v_color;\
+        void main(void) {\
+            gl_FragColor = vec4(v_color, 1.0);\
+        }\
+        ";
+    legacygl = get_legacygl(gl, vertex_shader_src, fragment_shader_src);
+    legacygl.add_uniform("modelview", "Matrix4f");
+    legacygl.add_uniform("projection", "Matrix4f");
+    legacygl.add_vertex_attribute("color", 3);
+    legacygl.vertex3 = function(p) {
+        this.vertex(p[0], p[1], p[2]);
+    };
+    displist = legacygl.displist_wrapper("mesh");
+    drawutil = get_drawutil(gl, legacygl);
+    camera = get_camera(canvas.width);
+    // event handlers
+    canvas.onmousedown = function(evt) {
+        camera.start_moving(this.get_mousepos(evt), evt.shiftKey ? "zoom" : evt.ctrlKey ? "pan" : "rotate");
+    };
+    canvas.onmousemove = function(evt) {
+        if (camera.is_moving()) {
+            camera.move(this.get_mousepos(evt));
+            draw();
+        }
+    };
+    document.onmouseup = function(evt) {
+        if (camera.is_moving())
+            camera.finish_moving();
+    };
+    document.getElementById("input_file").onchange = function() {
+        if (this.files.length == 0) return;
+        var file = this.files[0];
+        var reader = new FileReader();
+        reader.onload = function() {
+            mesh = meshio.read(file.name, this.result);
+            bbox = make_boundingbox();
+            mesh.vertices.forEach(function(v) {
+                bbox.extend(v.point);
+            });
+            camera.center = bbox.center();
+            camera.eye = numeric.add(camera.center, [0, 0, bbox.diagonal_norm() * 2]);
+            camera.up = [0, 1, 0];
+            redraw();
+        };
+        reader.readAsText(file);
+    };
+    // init OpenGL settings
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.enable(gl.DEPTH_TEST);
+    gl.enable(gl.POLYGON_OFFSET_FILL);
+    gl.polygonOffset(1, 1);
+    gl.clearColor(1, 1, 1, 1);
+};
+</script>
+</head>
+<body onload="init(); draw();">
+    <h2><script type="text/javascript">document.write(document.getElementById("title").innerHTML);</script></h2>
+    <table><tr><td>
+    <canvas id="canvas" width="640" height="480" style="border:1px solid #000000;"></canvas>
+    </td><td>
+    <ul>
+    <li>Mesh File: <input type="file" id="input_file"></li>
+    <li>Camera Control:</li>
+    <ul>
+        <li>Drag: Rotate</li>
+        <li>Shift+Drag: Zoom</li>
+        <li>Ctrl+Drag: Pan</li>
+    </ul>
+    </ul>
+    </td></tr></table>
+</body>
+</html>
