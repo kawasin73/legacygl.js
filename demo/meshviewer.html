@@ -16,7 +16,8 @@
 var gl;
 var canvas;
 var legacygl;
-var displist;
+var displist_faces;
+var displist_edges;
 var drawutil;
 var camera;
 var mesh;
@@ -24,41 +25,50 @@ var bbox;
 
 function draw() {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    if (!mesh) return;
+    
     // projection and camera position
     mat4.perspective(legacygl.uniforms.projection.value, Math.PI / 6, canvas.aspect_ratio(), 0.1, 1000);
     camera.lookAt(legacygl.uniforms.modelview.value);
     
-    // draw bounding box
-    if (mesh) {
-        var modelview = legacygl.uniforms.modelview;
-        modelview.push();
-        mat4.translate_ip(modelview.value, bbox.center());
-        mat4.scale_ip(modelview.value, bbox.diagonal());
-        legacygl.color(0.5, 0.5, 0.5);
-        drawutil.cube("line", 1);
-        modelview.pop();
-    }
-    // draw mesh
-    displist.draw(function() {
-        if (!mesh) return;
+    // bounding box
+    var modelview = legacygl.uniforms.modelview;
+    modelview.push();
+    mat4.translate_ip(modelview.value, bbox.center());
+    mat4.scale_ip(modelview.value, bbox.diagonal());
+    legacygl.color(0.5, 0.5, 0.5);
+    drawutil.cube("line", 1);
+    modelview.pop();
+    
+    // mesh faces
+    displist_faces.draw(function() {
         legacygl.color(0, 0.7, 1);
         legacygl.begin(gl.TRIANGLES);
         mesh.faces.forEach(function(f) {
             f.vertices().forEach(function(v){ legacygl.vertex3(v.point); });
         });
         legacygl.end();
-        legacygl.color(0, 0.2, 0.5);
-        legacygl.begin(gl.LINES);
-        mesh.edges_forEach(function(e) {
-            var h = e.halfedge;
-            legacygl.vertex3(h.vertex.point);
-            legacygl.vertex3(h.from_vertex().point);
-        });
-        legacygl.end();
     });
+    
+    // mesh edges
+    if (document.getElementById("checkbox_edges").checked) {
+        displist_edges.draw(function() {
+            if (!mesh) return;
+            legacygl.begin(gl.LINES);
+            mesh.edges_forEach(function(e) {
+                if (e.is_boundary())
+                    legacygl.color(1, 0, 0);
+                else
+                    legacygl.color(0, 0.2, 0.5);
+                e.vertices().forEach(function(v) { legacygl.vertex3(v.point); });
+            });
+            legacygl.end();
+        });
+    }
 };
-function redraw() {
-    displist.invalidate();
+function invalidate_displist() {
+    displist_faces.invalidate();
+    displist_edges.invalidate();
     draw();
 };
 function init() {
@@ -92,7 +102,8 @@ function init() {
     legacygl.vertex3 = function(p) {
         this.vertex(p[0], p[1], p[2]);
     };
-    displist = legacygl.displist_wrapper("mesh");
+    displist_faces = legacygl.displist_wrapper("faces");
+    displist_edges = legacygl.displist_wrapper("edges");
     drawutil = get_drawutil(gl, legacygl);
     camera = get_camera(canvas.width);
     // event handlers
@@ -109,23 +120,51 @@ function init() {
         if (camera.is_moving())
             camera.finish_moving();
     };
-    document.getElementById("input_file").onchange = function() {
-        if (this.files.length == 0) return;
-        var file = this.files[0];
+    document.ondragenter = function(evt) {
+        evt.stopPropagation();
+        evt.preventDefault();
+    };
+    document.ondragover = function(evt) {
+        evt.stopPropagation();
+        evt.preventDefault();
+    };
+    function read_mesh(filename, content) {
+        mesh = meshio.read(filename, content);
+        bbox = make_boundingbox();
+        mesh.vertices.forEach(function(v) {
+            bbox.extend(v.point);
+        });
+        camera.center = bbox.center();
+        camera.eye = numeric.add(camera.center, [0, 0, bbox.diagonal_norm() * 2]);
+        camera.up = [0, 1, 0];
+        invalidate_displist();
+        document.getElementById("info_filename").innerHTML = filename;
+        document.getElementById("info_nv").innerHTML = mesh.num_vertices();
+        document.getElementById("info_nf").innerHTML = mesh.num_faces();
+        document.getElementById("info_ne").innerHTML = mesh.num_edges();
+    };
+    document.ondrop = function(evt) {
+        evt.stopPropagation();
+        evt.preventDefault();
+        if (evt.dataTransfer.files.length == 0) return;
+        var file = evt.dataTransfer.files[0];
         var reader = new FileReader();
         reader.onload = function() {
-            mesh = meshio.read(file.name, this.result);
-            bbox = make_boundingbox();
-            mesh.vertices.forEach(function(v) {
-                bbox.extend(v.point);
-            });
-            camera.center = bbox.center();
-            camera.eye = numeric.add(camera.center, [0, 0, bbox.diagonal_norm() * 2]);
-            camera.up = [0, 1, 0];
-            redraw();
+            read_mesh(file.name, this.result);
         };
         reader.readAsText(file);
     };
+    document.getElementById("url_filename").onchange = function(evt) {
+        var xhr = new XMLHttpRequest();
+        var filename = this.value;
+        xhr.open("GET", filename, true);
+        xhr.onload = function(e) {
+            if (this.status == 200)
+                read_mesh(filename, this.response);
+        };
+        xhr.send();
+    };
+    document.getElementById("url_filename").onchange();
     // init OpenGL settings
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.enable(gl.DEPTH_TEST);
@@ -141,7 +180,28 @@ function init() {
     <canvas id="canvas" width="640" height="480" style="border:1px solid #000000;"></canvas>
     </td><td>
     <ul>
-    <li>Mesh File: <input type="file" id="input_file"></li>
+    <li>Open a mesh file (supported format: OBJ/OFF) by:</li>
+    <ul>
+        <li>Entering URL: <input type="url" id="url_filename" value="https://bitbucket.org/kenshi84/legacygl.js/raw/0dd3577e1c488451f952c3407a417ceb33e9dbea/demo/data/bunny.obj"></li>
+        <li>Dropping a file anywhere inside the window</li>
+    </ul>
+    <li>Info:</li>
+    <ul>
+        <li>File Name: <span id="info_filename"></span></li>
+        <li><span id="info_nv">0</span> Vertices</li>
+        <li><span id="info_nf">0</span> Faces</li>
+        <li><span id="info_ne">0</span> Edges</li>
+    </ul>
+    <li>Draw Option:</li>
+    <ul>
+        <li><input type="checkbox" id="checkbox_edges" checked onchange="draw()">Edges</li>
+        <li>Material</li>
+        <ul>
+            <li><input type="radio" name="radio_mat" checked onchange="draw()">Flat</li>
+            <li><input type="radio" name="radio_mat" onchange="draw()">Diffuse</li>
+            <li><input type="radio" name="radio_mat" onchange="draw()">Specular</li>
+        </ul>
+    </ul>
     <li>Camera Control:</li>
     <ul>
         <li>Drag: Rotate</li>
