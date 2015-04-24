@@ -35,6 +35,9 @@ function make_halfedge_mesh() {
             vertex.edges = function() {
                 return this.outgoing_halfedges().map(function(h) { return h.edge; });
             };
+            vertex.is_boundary = function() {
+                return this.halfedge.is_boundary();
+            };
             return vertex;
         };
         function make_face() {
@@ -60,6 +63,9 @@ function make_halfedge_mesh() {
             face.edges = function() {
                 return this.halfedges().map(function(h) { return h.edge; });
             };
+            face.is_boundary = function() {
+                return this.halfedges().some(function(h) { return h.opposite.is_boundary(); });
+            };
             return face;
         };
         function make_halfedge() {
@@ -74,6 +80,9 @@ function make_halfedge_mesh() {
             halfedge.from_vertex = function() {
                 return this.opposite.vertex;
             };
+            halfedge.is_boundary = function() {
+                return this.face == null;
+            };
             return halfedge;
         };
         function make_edge() {
@@ -84,10 +93,13 @@ function make_halfedge_mesh() {
                 return [this.halfedge, this.halfedge.opposite];
             };
             edge.vertices = function() {
-                return this.halfedges().map(function(h) { return h.vrtex; });
+                return this.halfedges().map(function(h) { return h.vertex; });
             };
             edge.faces = function() {
                 return this.halfedges().map(function(h) { return h.face; });
+            };
+            edge.is_boundary= function() {
+                return this.halfedges().some(function(h) { return h.is_boundary(); });
             };
             return edge;
         };
@@ -115,8 +127,7 @@ function make_halfedge_mesh() {
                 hij = mesh.halfedges[hij_key];
                 hji = mesh.halfedges[hji_key];
             }
-            // connectivity around vertices
-            vi.halfedge = hij;
+            // connectivity around vertices (only for vj so that boundary halfedge is not overwritten)
             vj.halfedge = hji;
             // connectivity around halfedges
             hij.vertex = vj;
@@ -158,6 +169,15 @@ function make_halfedge_mesh() {
         this.faces.forEach(function(f, i) { f.id = i; });
         this.edges_forEach(function(e, i) { e.id = i; });
         this.halfedges_forEach(function(h, i) { h.id = i; });
+    };
+    mesh.num_vertices = function() {
+        return this.vertices.length;
+    };
+    mesh.num_faces = function() {
+        return this.faces.length;
+    };
+    mesh.num_edges = function() {
+        return Object.keys(this.edges).length;
     };
     return mesh;
 };
