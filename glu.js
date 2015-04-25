@@ -25,29 +25,3 @@ function unproject(win_xyz, modelview, projection, viewport) {
     vec4.scale_ip(obj_xyzw, 1 / obj_xyzw[3]);
     return [obj_xyzw[0], obj_xyzw[1], obj_xyzw[2]];
 };
-
-HTMLCanvasElement.prototype.get_mousepos = function(event) {
-    var totalOffsetX = 0;
-    var totalOffsetY = 0;
-    for(var currentElement = this; currentElement; currentElement = currentElement.offsetParent) {
-        totalOffsetX += currentElement.offsetLeft;
-        totalOffsetY += currentElement.offsetTop;
-    }
-    for(var currentElement = this; currentElement && currentElement != document.body; currentElement = currentElement.parentElement) {
-        totalOffsetX -= currentElement.scrollLeft;
-        totalOffsetY -= currentElement.scrollTop;
-    }
-    var x = event.pageX - totalOffsetX;
-    var y = event.pageY - totalOffsetY;
-    return [x, this.height - y];
-};
-HTMLCanvasElement.prototype.aspect_ratio = function() {
-    return this.width / this.height;
-};
-function verify_filename_extension(filename, supported_extensions) {
-    var given_extension = filename.toLowerCase().slice(-4);
-    if (supported_extensions.some(function (x) { return x == given_extension; }))
-        return given_extension;
-    alert("Supported formats are: " + supported_extensions);
-    return undefined;
-};

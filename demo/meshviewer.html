@@ -16,8 +16,10 @@
 var gl;
 var canvas;
 var legacygl;
+var texture;
 var displist_faces;
 var displist_edges;
+var displist_normals;
 var drawutil;
 var camera;
 var mesh;
@@ -28,32 +30,44 @@ function draw() {
     if (!mesh) return;
     
     // projection and camera position
-    mat4.perspective(legacygl.uniforms.projection.value, Math.PI / 6, canvas.aspect_ratio(), 0.1, 1000);
-    camera.lookAt(legacygl.uniforms.modelview.value);
+    mat4.perspective(legacygl.uniforms.projectionMatrix.value, Math.PI / 6, canvas.aspect_ratio(), 0.1, 1000);
+    camera.lookAt(legacygl.uniforms.modelviewMatrix.value);
+    mat3.fromMat4(legacygl.uniforms.normalMatrix.value, legacygl.uniforms.modelviewMatrix.value);
+    mat3.invert_ip(legacygl.uniforms.normalMatrix.value);
+    mat3.transpose_ip(legacygl.uniforms.normalMatrix.value);
     
     // bounding box
-    var modelview = legacygl.uniforms.modelview;
-    modelview.push();
-    mat4.translate_ip(modelview.value, bbox.center());
-    mat4.scale_ip(modelview.value, bbox.diagonal());
+    legacygl.uniforms.modelviewMatrix.push();
+    mat4.translate_ip(legacygl.uniforms.modelviewMatrix.value, bbox.center());
+    mat4.scale_ip(legacygl.uniforms.modelviewMatrix.value, bbox.diagonal());
     legacygl.color(0.5, 0.5, 0.5);
     drawutil.cube("line", 1);
-    modelview.pop();
+    legacygl.uniforms.modelviewMatrix.pop();
     
     // mesh faces
+    legacygl.uniforms.use_material.push();
+    legacygl.uniforms.use_material.value = document.getElementById("check_flat").checked ? 0 : 1;
     displist_faces.draw(function() {
         legacygl.color(0, 0.7, 1);
+        if (document.getElementsByName("radio_normal")[2].checked)
+            legacygl.enable(legacygl.AUTO_NORMAL);
         legacygl.begin(gl.TRIANGLES);
         mesh.faces.forEach(function(f) {
-            f.vertices().forEach(function(v){ legacygl.vertex3(v.point); });
+            legacygl.normal3(f.normal);
+            f.vertices().forEach(function(v){
+                if (document.getElementsByName("radio_normal")[0].checked)
+                    legacygl.normal3(v.normal);
+                legacygl.vertex3(v.point);
+            });
         });
         legacygl.end();
+        legacygl.disable(legacygl.AUTO_NORMAL);
     });
+    legacygl.uniforms.use_material.pop();
     
     // mesh edges
-    if (document.getElementById("checkbox_edges").checked) {
+    if (document.getElementById("check_edges").checked) {
         displist_edges.draw(function() {
-            if (!mesh) return;
             legacygl.begin(gl.LINES);
             mesh.edges_forEach(function(e) {
                 if (e.is_boundary())
@@ -65,11 +79,26 @@ function draw() {
             legacygl.end();
         });
     }
-};
-function invalidate_displist() {
-    displist_faces.invalidate();
-    displist_edges.invalidate();
-    draw();
+
+    // normals
+    if (document.getElementById("check_normals").checked) {
+        displist_normals.draw(function() {
+            var s = bbox.diagonal_norm() * 0.01;
+            legacygl.begin(gl.LINES);
+            legacygl.color(0.6, 0.3, 0);
+            mesh.vertices.forEach(function(v){
+                legacygl.vertex3(v.point);
+                legacygl.vertex3(numeric.add(v.point, numeric.mul(v.normal, s)));
+            });
+            legacygl.color(0, 0.6, 0.3);
+            mesh.faces.forEach(function(f){
+                var p = f.centroid();
+                legacygl.vertex3(p);
+                legacygl.vertex3(numeric.add(p, numeric.mul(f.normal, s)));
+            });
+            legacygl.end();
+        });
+    }
 };
 function init() {
     // OpenGL context
@@ -80,30 +109,52 @@ function init() {
     var vertex_shader_src = "\
         attribute vec3 a_vertex;\
         attribute vec3 a_color;\
+        attribute vec3 a_normal;\
+        varying vec3 v_normal;\
         varying vec3 v_color;\
-        uniform mat4 u_modelview;\
-        uniform mat4 u_projection;\
+        uniform mat4 u_modelviewMatrix;\
+        uniform mat4 u_projectionMatrix;\
+        uniform mat3 u_normalMatrix;\
         void main(void) {\
-            gl_Position = u_projection * u_modelview * vec4(a_vertex, 1.0);\
+            gl_Position = u_projectionMatrix * u_modelviewMatrix * vec4(a_vertex, 1.0);\
             v_color = a_color;\
+            v_normal = u_normalMatrix * a_normal;\
         }\
         ";
     var fragment_shader_src = "\
         precision mediump float;\
+        uniform sampler2D u_texture;\
+        uniform int u_use_material;\
+        varying vec3 v_normal;\
         varying vec3 v_color;\
         void main(void) {\
-            gl_FragColor = vec4(v_color, 1.0);\
+            if (u_use_material == 1) {\
+                vec3 nnormal = normalize(v_normal);\
+                nnormal.y *= -1.0;\
+                vec2 texcoord = nnormal.xy * 0.45 + vec2(0.5, 0.5);\
+                gl_FragColor = texture2D(u_texture, texcoord);\
+            } else {\
+                gl_FragColor = vec4(v_color, 1.0);\
+            }\
         }\
         ";
     legacygl = get_legacygl(gl, vertex_shader_src, fragment_shader_src);
-    legacygl.add_uniform("modelview", "Matrix4f");
-    legacygl.add_uniform("projection", "Matrix4f");
+    legacygl.add_uniform("modelviewMatrix", "Matrix4f");
+    legacygl.add_uniform("projectionMatrix", "Matrix4f");
+    legacygl.add_uniform("normalMatrix", "Matrix3f");
+    legacygl.add_uniform("texture", "1i");
+    legacygl.add_uniform("use_material", "1i");
     legacygl.add_vertex_attribute("color", 3);
+    legacygl.add_vertex_attribute("normal", 3);
     legacygl.vertex3 = function(p) {
         this.vertex(p[0], p[1], p[2]);
     };
+    legacygl.normal3 = function(n) {
+        this.normal(n[0], n[1], n[2]);
+    };
     displist_faces = legacygl.displist_wrapper("faces");
     displist_edges = legacygl.displist_wrapper("edges");
+    displist_normals = legacygl.displist_wrapper("normals");
     drawutil = get_drawutil(gl, legacygl);
     camera = get_camera(canvas.width);
     // event handlers
@@ -120,16 +171,9 @@ function init() {
         if (camera.is_moving())
             camera.finish_moving();
     };
-    document.ondragenter = function(evt) {
-        evt.stopPropagation();
-        evt.preventDefault();
-    };
-    document.ondragover = function(evt) {
-        evt.stopPropagation();
-        evt.preventDefault();
-    };
     function read_mesh(filename, content) {
         mesh = meshio.read(filename, content);
+        mesh.compute_normals();
         bbox = make_boundingbox();
         mesh.vertices.forEach(function(v) {
             bbox.extend(v.point);
@@ -137,40 +181,80 @@ function init() {
         camera.center = bbox.center();
         camera.eye = numeric.add(camera.center, [0, 0, bbox.diagonal_norm() * 2]);
         camera.up = [0, 1, 0];
-        invalidate_displist();
-        document.getElementById("info_filename").innerHTML = filename;
-        document.getElementById("info_nv").innerHTML = mesh.num_vertices();
-        document.getElementById("info_nf").innerHTML = mesh.num_faces();
-        document.getElementById("info_ne").innerHTML = mesh.num_edges();
+        displist_faces.invalidate();
+        displist_edges.invalidate();
+        displist_normals.invalidate();
+        draw();
+        document.getElementById("label_mesh_nv").innerHTML = mesh.num_vertices();
+        document.getElementById("label_mesh_nf").innerHTML = mesh.num_faces();
+        document.getElementById("label_mesh_ne").innerHTML = mesh.num_edges();
     };
-    document.ondrop = function(evt) {
-        evt.stopPropagation();
-        evt.preventDefault();
-        if (evt.dataTransfer.files.length == 0) return;
-        var file = evt.dataTransfer.files[0];
+    document.getElementById("text_mesh_disk").onchange = function() {
+        if (this.files.length != 1) return;
+        var file = this.files[0];
+        if (!verify_filename_extension(file.name, [".obj", ".off"])) return;
         var reader = new FileReader();
         reader.onload = function() {
             read_mesh(file.name, this.result);
         };
         reader.readAsText(file);
     };
-    document.getElementById("url_filename").onchange = function(evt) {
-        var xhr = new XMLHttpRequest();
+    document.getElementById("text_mesh_url").onchange = function() {
         var filename = this.value;
+        if (!verify_filename_extension(filename, [".obj", ".off"])) return;
+        var xhr = new XMLHttpRequest();
         xhr.open("GET", filename, true);
-        xhr.onload = function(e) {
+        xhr.onload = function() {
             if (this.status == 200)
                 read_mesh(filename, this.response);
         };
         xhr.send();
     };
-    document.getElementById("url_filename").onchange();
+    document.getElementById("text_mesh_url").onchange();
+    function read_texture(dataurl) {
+        var img = new Image();
+        img.onload = function() {
+            gl.bindTexture(gl.TEXTURE_2D, texture);
+            // gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+            displist_faces.invalidate();
+            draw();
+        };
+        img.src = dataurl;
+    };
+    document.getElementById("text_material_disk").onchange = function() {
+        if (this.files.length != 1) return;
+        var file = this.files[0];
+        if (!verify_filename_extension(file.name, [".png", ".jpg", ".gif"])) return;
+        var reader = new FileReader();
+        reader.onload = function() {
+            read_texture(this.result);
+        };
+        reader.readAsDataURL(file);
+    };
+    document.getElementById("text_material_url").onchange = function() {
+        var filename = this.value;
+        if (!verify_filename_extension(filename, [".png", ".jpg", ".gif"])) return;
+        var xhr = new XMLHttpRequest();
+        xhr.open("GET", filename, true);
+        xhr.responseType = "blob";
+        xhr.onload = function() {
+            if (this.status == 200)
+                read_texture(URL.createObjectURL(this.response));
+        };
+        xhr.send();
+    };
+    document.getElementById("text_material_url").onchange();
     // init OpenGL settings
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.enable(gl.DEPTH_TEST);
     gl.enable(gl.POLYGON_OFFSET_FILL);
     gl.polygonOffset(1, 1);
     gl.clearColor(1, 1, 1, 1);
+    // init texture
+    texture = gl.createTexture();
 };
 </script>
 </head>
@@ -180,29 +264,35 @@ function init() {
     <canvas id="canvas" width="640" height="480" style="border:1px solid #000000;"></canvas>
     </td><td>
     <ul>
-    <li>Open a mesh file (supported format: OBJ/OFF) by:</li>
+    <li>Mesh</li>
     <ul>
-        <li>Entering URL: <input type="url" id="url_filename" value="https://bitbucket.org/kenshi84/legacygl.js/raw/0dd3577e1c488451f952c3407a417ceb33e9dbea/demo/data/bunny.obj"></li>
-        <li>Dropping a file anywhere inside the window</li>
-    </ul>
-    <li>Info:</li>
-    <ul>
-        <li>File Name: <span id="info_filename"></span></li>
-        <li><span id="info_nv">0</span> Vertices</li>
-        <li><span id="info_nf">0</span> Faces</li>
-        <li><span id="info_ne">0</span> Edges</li>
-    </ul>
-    <li>Draw Option:</li>
-    <ul>
-        <li><input type="checkbox" id="checkbox_edges" checked onchange="draw()">Edges</li>
-        <li>Material</li>
+        <li>from Disk: <input type="file" id="text_mesh_disk"></li>
+        <li>from URL: <input type="url" id="text_mesh_url" value="https://bitbucket.org/kenshi84/legacygl.js/raw/0dd3577e1c488451f952c3407a417ceb33e9dbea/demo/data/bunny.obj"></li>
+        <li>Statistics:</li>
         <ul>
-            <li><input type="radio" name="radio_mat" checked onchange="draw()">Flat</li>
-            <li><input type="radio" name="radio_mat" onchange="draw()">Diffuse</li>
-            <li><input type="radio" name="radio_mat" onchange="draw()">Specular</li>
+            <li><span id="label_mesh_nv">0</span> Vertices</li>
+            <li><span id="label_mesh_nf">0</span> Faces</li>
+            <li><span id="label_mesh_ne">0</span> Edges</li>
         </ul>
     </ul>
-    <li>Camera Control:</li>
+    <li>Material</li>
+    <ul>
+        <li>from Disk: <input type="file" id="text_material_disk"></li>
+        <li>from URL: <input type="url" id="text_material_url" value="https://bytebucket.org/kenshi84/legacygl.js/raw/cce473047b802537091eece6258d6be01d7c3750/demo/data/metal1.png"></li>
+    </ul>
+    <li>Draw Options</li>
+    <ul>
+        <li><input type="checkbox" id="check_flat" onchange="draw()">Use Flat Shading</li>
+        <li><input type="checkbox" id="check_edges" checked onchange="draw()">Show Edges</li>
+        <li><input type="checkbox" id="check_normals" onchange="draw()">Show Normals</li>
+        <li>Normal</li>
+        <ul>
+            <li><input type="radio" name="radio_normal" onchange="displist_faces.invalidate(); draw()">Per-Vertex</li>
+            <li><input type="radio" name="radio_normal" onchange="displist_faces.invalidate(); draw()" checked>Per-Face</li>
+            <li><input type="radio" name="radio_normal" onchange="displist_faces.invalidate(); draw()">Per-Face (Auto)</li>
+        </ul>
+    </ul>
+    <li>Camera Control</li>
     <ul>
         <li>Drag: Rotate</li>
         <li>Shift+Drag: Zoom</li>

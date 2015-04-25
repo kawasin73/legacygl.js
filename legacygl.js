@@ -133,15 +133,28 @@ function get_legacygl(gl, vertex_shader_src, fragment_shader_src) {
         });
     };
     legacygl.end = function() {
+        var num_vertices = this.vertex_attributes[0].array.length / 3;
+        var mode = this.mode == this.QUADS ? gl.TRIANGLES : this.mode;
         this.vertex_attributes.forEach(function(vertex_attribute) {
             vertex_attribute.buffer = gl.createBuffer();
             gl.bindBuffer(gl.ARRAY_BUFFER, vertex_attribute.buffer);
+            // simulate GL_AUTO_NORMAL
+            if (mode == gl.TRIANGLES && vertex_attribute.name == "normal" && legacygl.flags.AUTO_NORMAL) {
+                for (var i = 0; i < num_vertices / 3; ++i) {
+                    var v = [];
+                    for (var j = 0; j < 3; ++j)
+                        v.push(this.vertex_attributes[0].array.slice(3 * (3 * i + j), 3));
+                    vec3.sub_ip(v[1], v[0]);
+                    vec3.sub_ip(v[2], v[0]);
+                    var n = vec3.cross([], v[1], v[2]);
+                    vec3.normalize_ip(n);
+                    for (var j = 0; j < 3; ++j)
+                        vertex_attribute.array.splice(3 * (3 * i + j), 3, n[0], n[1], n[2]);
+                }
+            }
             gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertex_attribute.array), gl.STATIC_DRAW);
             gl.vertexAttribPointer(vertex_attribute.location, vertex_attribute.size, gl.FLOAT, false, 0, 0);
         });
-        // emulate GL_QUADS
-        var num_vertices = this.vertex_attributes[0].array.length / 3;
-        var mode = this.mode == this.QUADS ? gl.TRIANGLES : this.mode;
         gl.drawArrays(mode, 0, num_vertices);
         this.vertex_attributes.forEach(function(vertex_attribute) {
             gl.deleteBuffer(vertex_attribute.buffer);
@@ -159,7 +172,7 @@ function get_legacygl(gl, vertex_shader_src, fragment_shader_src) {
         }
     };
     // emulate GL_QUADS
-    legacygl.QUADS = "GL_QUADS";
+    legacygl.QUADS = "QUADS";
     // display list
     legacygl.displists = {};
     legacygl.current_displist_name = null;
@@ -227,6 +240,17 @@ function get_legacygl(gl, vertex_shader_src, fragment_shader_src) {
             this.is_valid = false;
         };
         return wrapper;
+    };
+    // emulate GL_AUTO_NORMAL
+    legacygl.AUTO_NORMAL = "AUTO_NORMAL";
+    legacygl.flags = {
+        AUTO_NORMAL: false
+    };
+    legacygl.enable = function(flag) {
+        this.flags[flag] = true;
+    };
+    legacygl.disable = function(flag) {
+        this.flags[flag] = false;
     };
     return legacygl;
 };

@@ -26,7 +26,8 @@ meshio.read_obj = function(file_content) {
         var z = points[3 * i + 2];
         mesh.vertices[i].point = [x, y, z];
     }
-    mesh.set_ids();
+    mesh.init_ids();
+    mesh.init_boundaries();
     return mesh;
 };
 meshio.read_off = function(file_content) {
@@ -75,7 +76,8 @@ meshio.read_off = function(file_content) {
         var z = points[3 * i + 2];
         mesh.vertices[i].point = [x, y, z];
     }
-    mesh.set_ids();
+    mesh.init_ids();
+    mesh.init_boundaries()();
     return mesh;
 };
 meshio.read = function(filename, content) {

@@ -12,6 +12,8 @@ function make_halfedge_mesh() {
         function make_vertex() {
             var vertex = {
                 halfedge: null,
+                point: null,
+                normal: null
             };
             vertex.outgoing_halfedges = function() {
                 var result = [];
@@ -30,7 +32,12 @@ function make_halfedge_mesh() {
                 return this.outgoing_halfedges().map(function(h) { return h.vertex; });
             };
             vertex.faces = function() {
-                return this.outgoing_halfedges().map(function(h) { return h.face; });
+                var result = [];
+                this.outgoing_halfedges().forEach(function(h) {
+                    if(h.face)
+                        result.push(h.face);
+                });
+                return result;
             };
             vertex.edges = function() {
                 return this.outgoing_halfedges().map(function(h) { return h.edge; });
@@ -42,7 +49,8 @@ function make_halfedge_mesh() {
         };
         function make_face() {
             var face = {
-                halfedge: null
+                halfedge: null,
+                normal: null,
             };
             face.halfedges = function() {
                 var result = [];
@@ -65,6 +73,15 @@ function make_halfedge_mesh() {
             };
             face.is_boundary = function() {
                 return this.halfedges().some(function(h) { return h.opposite.is_boundary(); });
+            };
+            face.centroid = function() {
+                var result = [0, 0, 0];
+                var cnt = 0;
+                this.vertices().forEach(function(v) {
+                    result = numeric.add(result, v.point);
+                    ++cnt;
+                });
+                return numeric.mul(result, 1 / cnt);
             };
             return face;
         };
@@ -127,7 +144,8 @@ function make_halfedge_mesh() {
                 hij = mesh.halfedges[hij_key];
                 hji = mesh.halfedges[hji_key];
             }
-            // connectivity around vertices (only for vj so that boundary halfedge is not overwritten)
+            // connectivity around vertices
+            vi.halfedge = hij;
             vj.halfedge = hji;
             // connectivity around halfedges
             hij.vertex = vj;
@@ -142,15 +160,15 @@ function make_halfedge_mesh() {
             // connectivity around face
             face.halfedge = hij;
         }
-        // set prev/next for halfedges
+        // set prev/next for halfedges, link from vertex to halfedge
         for (var k = 0; k < fv_indices.length; ++k) {
             var i0 = fv_indices[k];
             var i1 = fv_indices[(k + 1) % fv_indices.length];
             var i2 = fv_indices[(k + 2) % fv_indices.length];
-            var h0 = mesh.halfedges[i0 + ":" + i1];
-            var h1 = mesh.halfedges[i1 + ":" + i2];
-            h0.next = h1;
-            h1.prev = h0;
+            var h01 = this.halfedges[i0 + ":" + i1];
+            var h12 = this.halfedges[i1 + ":" + i2];
+            h01.next = h12;
+            h12.prev = h01;
         }
         this.faces.push(face);
     };
@@ -164,11 +182,24 @@ function make_halfedge_mesh() {
             func(mesh.edges[key], index);
         });
     };
-    mesh.set_ids = function() {
+    mesh.init_ids = function() {
         this.vertices.forEach(function(v, i) { v.id = i; });
         this.faces.forEach(function(f, i) { f.id = i; });
         this.edges_forEach(function(e, i) { e.id = i; });
         this.halfedges_forEach(function(h, i) { h.id = i; });
+    };
+    mesh.init_boundaries = function() {
+        // make sure that boundary vertex is linked to boundary halfedge, next/prev ordering between boundary halfedges
+        this.halfedges_forEach(function(h){
+            if (h.is_boundary())
+                h.from_vertex().halfedge = h;
+        });
+        this.halfedges_forEach(function(h){
+            if (h.is_boundary()) {
+                h.next = h.vertex.halfedge;
+                h.vertex.halfedge.prev = h;
+            }
+        });
     };
     mesh.num_vertices = function() {
         return this.vertices.length;
@@ -178,6 +209,30 @@ function make_halfedge_mesh() {
     };
     mesh.num_edges = function() {
         return Object.keys(this.edges).length;
+    };
+    mesh.compute_normals = function() {
+        // per-face
+        this.faces.forEach(function(f){
+            f.normal = [0, 0, 0];
+            f.halfedges().forEach(function(h){
+                var p0 = h.from_vertex().point;
+                var p1 = h.vertex.point;
+                var p2 = h.next.vertex.point;
+                var d1 = numeric.sub(p1, p0);
+                var d2 = numeric.sub(p2, p0);
+                var n = vec3.cross([], d1, d2);
+                f.normal = numeric.add(f.normal, n);
+            });
+            vec3.normalize_ip(f.normal);
+        });
+        // per-vertex
+        this.vertices.forEach(function(v, index){
+            v.normal = [0, 0, 0];
+            v.faces().forEach(function(f){
+                v.normal = numeric.add(v.normal, f.normal);
+            });
+            vec3.normalize_ip(v.normal);
+        });
     };
     return mesh;
 };
