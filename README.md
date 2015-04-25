@@ -105,21 +105,21 @@ function init() {
 </body>
 </html>
 ```
-http://htmlpreview.github.io/?https://bitbucket.org/kenshi84/legacygl.js/raw/eafcbe95fbd838d5b5e98b0108a61e55bd3b3c03/demo/hello3d.html
+http://htmlpreview.github.io/?https://bitbucket.org/kenshi84/legacygl.js/raw/6f180a007849e7d3412f68d9d351e7cee96507ce/demo/hello3d.html
 
 ### Demos ###
 - Hello World 2D
-    - http://htmlpreview.github.io/?https://bitbucket.org/kenshi84/legacygl.js/raw/eafcbe95fbd838d5b5e98b0108a61e55bd3b3c03/demo/hello2d.html
+    - http://htmlpreview.github.io/?https://bitbucket.org/kenshi84/legacygl.js/raw/6f180a007849e7d3412f68d9d351e7cee96507ce/demo/hello2d.html
 - Pick/Move Objects in 3D
-    - http://htmlpreview.github.io/?https://bitbucket.org/kenshi84/legacygl.js/raw/eafcbe95fbd838d5b5e98b0108a61e55bd3b3c03/demo/pick3d.html
+    - http://htmlpreview.github.io/?https://bitbucket.org/kenshi84/legacygl.js/raw/6f180a007849e7d3412f68d9d351e7cee96507ce/demo/pick3d.html
 - Pick/Move Objects in 2D
-    - http://htmlpreview.github.io/?https://bitbucket.org/kenshi84/legacygl.js/raw/eafcbe95fbd838d5b5e98b0108a61e55bd3b3c03/demo/pick2d.html
+    - http://htmlpreview.github.io/?https://bitbucket.org/kenshi84/legacygl.js/raw/6f180a007849e7d3412f68d9d351e7cee96507ce/demo/pick2d.html
 - Z-Buffer
-    - http://htmlpreview.github.io/?https://bitbucket.org/kenshi84/legacygl.js/raw/eafcbe95fbd838d5b5e98b0108a61e55bd3b3c03/demo/z-buffer.html
+    - http://htmlpreview.github.io/?https://bitbucket.org/kenshi84/legacygl.js/raw/6f180a007849e7d3412f68d9d351e7cee96507ce/demo/z-buffer.html
 - Display List
-    - http://htmlpreview.github.io/?https://bitbucket.org/kenshi84/legacygl.js/raw/eafcbe95fbd838d5b5e98b0108a61e55bd3b3c03/demo/displist.html
+    - http://htmlpreview.github.io/?https://bitbucket.org/kenshi84/legacygl.js/raw/6f180a007849e7d3412f68d9d351e7cee96507ce/demo/displist.html
 - Mesh Viewer
-    - http://htmlpreview.github.io/?https://bitbucket.org/kenshi84/legacygl.js/raw/eafcbe95fbd838d5b5e98b0108a61e55bd3b3c03/demo/meshviewer.html
+    - http://htmlpreview.github.io/?https://bitbucket.org/kenshi84/legacygl.js/raw/6f180a007849e7d3412f68d9d351e7cee96507ce/demo/meshviewer.html
 
 ### Tutorial ###
-- [Managing Shader Variables](https://bitbucket.org/kenshi84/legacygl.js/src/15e6a6f6b6e938319648fbf996edf6475889cc7d/doc/tutorial-managing-shader-variables.md)
+- [Managing Shader Variables](https://bitbucket.org/kenshi84/legacygl.js/src/6f180a007849e7d3412f68d9d351e7cee96507ce/doc/tutorial-managing-shader-variables.md)
