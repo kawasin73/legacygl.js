@@ -83,19 +83,52 @@ meshio.read_off = function(file_content) {
 meshio.read = function(filename, content) {
     var file_extension = filename.toLowerCase().slice(-4);
     if (file_extension == ".obj")
-        return meshio.read_obj(content);
+        return this.read_obj(content);
     if (file_extension == ".off")
-        return meshio.read_off(content);
+        return this.read_off(content);
     console.log("Unsupported format: " + file_extension);
 };
 meshio.write_obj = function(mesh) {
     var lines = [];
-    return lines.join("");
+    mesh.vertices.forEach(function(v){
+        var line = "v ";
+        for (var i = 0; i < 3; ++i)
+            line += v.point[i] + " ";
+        lines.push(line);
+    });
+    mesh.faces.forEach(function(f){
+        var line = "f ";
+        f.vertices().forEach(function(v){
+            line += (v.id + 1) + " ";
+        });
+        lines.push(line);
+    });
+    return lines.join("\n");
 };
 meshio.write_off = function(mesh) {
-    var lines = [];
-    return lines.join("");
+    var lines = ["OFF"];
+    lines.push(mesh.num_vertices() + " " + mesh.num_faces() + " 0");
+    mesh.vertices.forEach(function(v){
+        var line = "";
+        for (var i = 0; i < 3; ++i)
+            line += v.point[i] + " ";
+        lines.push(line);
+    });
+    mesh.faces.forEach(function(f){
+        var f_vertices = f.vertices();
+        var line = f_vertices.length + " ";
+        f_vertices.forEach(function(v){
+            line += v.id + " ";
+        });
+        lines.push(line);
+    });
+    return lines.join("\n");
 };
 meshio.write = function(mesh, filename) {
-    // TODO
+    var file_extension = filename.toLowerCase().slice(-4);
+    if (file_extension == ".obj")
+        return this.write_obj(mesh);
+    if (file_extension == ".off")
+        return this.write_off(mesh);
+    console.log("Unsupported format: " + file_extension);
 };
