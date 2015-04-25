@@ -142,8 +142,10 @@ function get_legacygl(gl, vertex_shader_src, fragment_shader_src) {
             if (mode == gl.TRIANGLES && vertex_attribute.name == "normal" && legacygl.flags.AUTO_NORMAL) {
                 for (var i = 0; i < num_vertices / 3; ++i) {
                     var v = [];
-                    for (var j = 0; j < 3; ++j)
-                        v.push(this.vertex_attributes[0].array.slice(3 * (3 * i + j), 3));
+                    for (var j = 0; j < 3; ++j) {
+                        var slicepos = 3 * (3 * i + j);
+                        v.push(legacygl.vertex_attributes[0].array.slice(slicepos, slicepos + 3));
+                    }
                     vec3.sub_ip(v[1], v[0]);
                     vec3.sub_ip(v[2], v[0]);
                     var n = vec3.cross([], v[1], v[2]);
