@@ -212,7 +212,7 @@ function init() {
     };
     document.getElementById("text_mesh_url").onchange();
     function read_texture(dataurl) {
-        var img = new Image();
+        var img = document.getElementById("img_material");
         img.onload = function() {
             gl.bindTexture(gl.TEXTURE_2D, texture);
             // gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
@@ -279,6 +279,7 @@ function init() {
     <ul>
         <li>from Disk: <input type="file" id="text_material_disk"></li>
         <li>from URL: <input type="url" id="text_material_url" value="https://bytebucket.org/kenshi84/legacygl.js/raw/cce473047b802537091eece6258d6be01d7c3750/demo/data/metal1.png"></li>
+        <li><img id="img_material"></li>
     </ul>
     <li>Draw Options</li>
     <ul>
