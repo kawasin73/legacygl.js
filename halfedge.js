@@ -121,6 +121,17 @@ function make_halfedge_mesh() {
             return edge;
         };
         // <<<< element constructors
+        // check for existence of nonmanifold edges
+        for (var k = 0; k < fv_indices.length; ++k) {
+            var i = fv_indices[k];
+            var j = fv_indices[(k + 1) % fv_indices.length];
+            var h_key = i + ":" + j;
+            var h = mesh.halfedges[h_key];
+            if (h && h.face) {
+                console.log("Nonmanifold edge found at (" + [i, j] + ")");
+                return;
+            }
+        }
         var face = make_face();
         for (var k = 0; k < fv_indices.length; ++k) {
             var i = fv_indices[k];
@@ -154,8 +165,6 @@ function make_halfedge_mesh() {
             hji.opposite = hij;
             hij.edge = hji.edge = eij;
             eij.halfedge = hij;
-            if (hij.face)
-                console.log("nonmanifold detected at edge (" + [i, j] + ")");
             hij.face = face;
             // connectivity around face
             face.halfedge = hij;
