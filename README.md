@@ -119,7 +119,7 @@ http://htmlpreview.github.io/?https://bitbucket.org/kenshi84/legacygl.js/raw/6f1
 - Display List
     - http://htmlpreview.github.io/?https://bitbucket.org/kenshi84/legacygl.js/raw/6f180a007849e7d3412f68d9d351e7cee96507ce/demo/displist.html
 - Mesh Viewer
-    - http://htmlpreview.github.io/?https://bitbucket.org/kenshi84/legacygl.js/raw/6f180a007849e7d3412f68d9d351e7cee96507ce/demo/meshviewer.html
+    - http://htmlpreview.github.io/?https://bitbucket.org/kenshi84/legacygl.js/raw/06da1356c54f2a824824eefb2809c4bd63e9be7b/demo/meshviewer.html
 
 ### Tutorial ###
 - [Managing Shader Variables](https://bitbucket.org/kenshi84/legacygl.js/src/6f180a007849e7d3412f68d9d351e7cee96507ce/doc/tutorial-managing-shader-variables.md)
