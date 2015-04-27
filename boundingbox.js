@@ -21,7 +21,7 @@ function make_boundingbox() {
         return numeric.mul(numeric.add(this.max, this.min), 0.5);
     };
     bbox.is_empty = function() {
-        return this.max[0] < this.min[0];
+        return !numeric.all(numeric.geq(this.max, this.min));
     };
     return bbox;
 }
