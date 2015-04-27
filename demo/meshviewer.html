@@ -30,7 +30,9 @@ function draw() {
     if (!mesh) return;
     
     // projection and camera position
-    mat4.perspective(legacygl.uniforms.projectionMatrix.value, Math.PI / 6, canvas.aspect_ratio(), 0.1, 1000);
+    var zmin = numeric.norm2(camera.eye_to_center()) * 0.01;
+    var zmax = zmin * 10000;
+    mat4.perspective(legacygl.uniforms.projectionMatrix.value, Math.PI / 6, canvas.aspect_ratio(), zmin, zmax);
     camera.lookAt(legacygl.uniforms.modelviewMatrix.value);
     mat3.fromMat4(legacygl.uniforms.normalMatrix.value, legacygl.uniforms.modelviewMatrix.value);
     mat3.invert_ip(legacygl.uniforms.normalMatrix.value);
@@ -74,7 +76,9 @@ function draw() {
                     legacygl.color(1, 0, 0);
                 else
                     legacygl.color(0, 0.2, 0.5);
-                e.vertices().forEach(function(v) { legacygl.vertex3(v.point); });
+                e.vertices().forEach(function(v) {
+                    legacygl.vertex3(v.point);
+                });
             });
             legacygl.end();
         });
