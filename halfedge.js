@@ -126,7 +126,7 @@ function make_halfedge_mesh() {
             var i = fv_indices[k];
             var j = fv_indices[(k + 1) % fv_indices.length];
             var h_key = i + ":" + j;
-            var h = mesh.halfedges[h_key];
+            var h = this.halfedges[h_key];
             if (h && h.face) {
                 console.log("Nonmanifold edge found at (" + [i, j] + ")");
                 return;
@@ -137,23 +137,23 @@ function make_halfedge_mesh() {
             var i = fv_indices[k];
             var j = fv_indices[(k + 1) % fv_indices.length];
             // two vertices
-            var vi = mesh.vertices[i];
-            var vj = mesh.vertices[j];
-            if (!vi) vi = mesh.vertices[i] = make_vertex();
-            if (!vj) vj = mesh.vertices[j] = make_vertex();
+            var vi = this.vertices[i];
+            var vj = this.vertices[j];
+            if (!vi) vi = this.vertices[i] = make_vertex();
+            if (!vj) vj = this.vertices[j] = make_vertex();
             // edge and two halfedges
             var hij_key = i + ":" + j;
             var hji_key = j + ":" + i;
             var eij_key = Math.min(i, j) + ":" + Math.max(i, j);
-            var eij = mesh.edges[eij_key];
+            var eij = this.edges[eij_key];
             var hij, hji;
             if (!eij) {
-                hij = mesh.halfedges[hij_key] = make_halfedge();
-                hji = mesh.halfedges[hji_key] = make_halfedge();
-                eij = mesh.edges[eij_key] = make_edge();
+                hij = this.halfedges[hij_key] = make_halfedge();
+                hji = this.halfedges[hji_key] = make_halfedge();
+                eij = this.edges[eij_key] = make_edge();
             } else {
-                hij = mesh.halfedges[hij_key];
-                hji = mesh.halfedges[hji_key];
+                hij = this.halfedges[hij_key];
+                hji = this.halfedges[hji_key];
             }
             // connectivity around vertices
             vi.halfedge = hij;

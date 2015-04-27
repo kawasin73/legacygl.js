@@ -12,7 +12,7 @@ meshio.read_obj = function(file_content) {
             var x = parseFloat(tokens[1]);
             var y = parseFloat(tokens[2]);
             var z = parseFloat(tokens[3]);
-            points.push(x, y, z);
+            points.push([x, y, z]);
         } else if (head == "f") {
             var fv_indices = [];
             for (var i = 1; i < tokens.length; ++i)
@@ -20,12 +20,8 @@ meshio.read_obj = function(file_content) {
             mesh.add_face(fv_indices);
         }
     });
-    for (var i = 0; i < points.length / 3; ++i) {
-        var x = points[3 * i];
-        var y = points[3 * i + 1];
-        var z = points[3 * i + 2];
-        mesh.vertices[i].point = [x, y, z];
-    }
+    for (var i = 0; i < points.length; ++i)
+        mesh.vertices[i].point = points[i];
     mesh.init_ids();
     mesh.init_boundaries();
     return mesh;
@@ -56,7 +52,7 @@ meshio.read_off = function(file_content) {
             var x = parseFloat(tokens[0]);
             var y = parseFloat(tokens[1]);
             var z = parseFloat(tokens[2]);
-            points.push(x, y, z);
+            points.push([x, y, z]);
             ++cnt_vertices;
         } else if (cnt_faces < num_faces) {
             var fv_indices = [];
@@ -70,12 +66,8 @@ meshio.read_off = function(file_content) {
     };
     if (cnt_faces != num_faces)
         console.log("Inconsistent face count: " + num_faces + " as declared vs " + cnt_faces + " found");
-    for (var i = 0; i < points.length / 3; ++i) {
-        var x = points[3 * i];
-        var y = points[3 * i + 1];
-        var z = points[3 * i + 2];
-        mesh.vertices[i].point = [x, y, z];
-    }
+    for (var i = 0; i < points.length; ++i)
+        mesh.vertices[i].point = points[i];
     mesh.init_ids();
     mesh.init_boundaries()();
     return mesh;
