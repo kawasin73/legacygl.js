@@ -6,7 +6,7 @@ meshio.read_obj = function(file_content) {
     var points = [];
     file_content.split("\n").forEach(function(line) {
         var tokens = line.trim().split(" ");
-        if (tokens.length < 4 || tokens[0].startsWith("#")) return;
+        if (tokens.length < 4 || tokens[0][0] == "#") return;
         var head = tokens[0];
         if (head == "v") {
             var x = parseFloat(tokens[1]);
@@ -38,7 +38,7 @@ meshio.read_off = function(file_content) {
     for (var i = 0; i < lines.length; ++i) {
         var line = lines[i];
         var tokens = line.trim().split(" ");
-        if (tokens.length == 0 || tokens[0].startsWith("#")) continue;
+        if (tokens.length == 0 || tokens[0][0] == "#") continue;
         if (!magic) {
             if (tokens[0] != "OFF") {
                 console.log("Bad magic: " + tokens[0]);
