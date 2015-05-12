@@ -29,10 +29,11 @@ function get_legacygl(gl, vertex_shader_src, fragment_shader_src) {
     // utility for uniforms
     legacygl.uniforms = {};
     legacygl.add_uniform = function(name, type) {
-        this.uniforms[name] = {};
-        this.uniforms[name].location = gl.getUniformLocation(this.shader.program, "u_" + name);
-        this.uniforms[name].type = type;
-        this.uniforms[name].value =
+        var uniform = {
+            location: gl.getUniformLocation(this.shader.program, "u_" + name),
+            type: type
+        };
+        uniform.value =
             type == "1f" || type == "1i" ? 0 :
             type == "2f" || type == "2i" ? vec2.create() :
             type == "3f" || type == "3i" ? vec3.create() :
@@ -41,8 +42,8 @@ function get_legacygl(gl, vertex_shader_src, fragment_shader_src) {
             type == "Matrix3f" ? mat3.create() :
             type == "Matrix4f" ? mat4.create() :
             undefined;
-        this.uniforms[name].stack = [];
-        this.uniforms[name].push = function(){
+        uniform.stack = [];
+        uniform.push = function(){
             var copy =
                 type == "1f" || type == "1i" ? this.value :
                 type == "2f" || type == "2i" ? vec2.copy([], this.value) :
@@ -54,7 +55,7 @@ function get_legacygl(gl, vertex_shader_src, fragment_shader_src) {
                 undefined;
             this.stack.push(copy);
         };
-        this.uniforms[name].pop = function(){
+        uniform.pop = function(){
             var copy = this.stack[this.stack.length - 1];
             this.value =
                 type == "1f" || type == "1i" ? copy :
@@ -67,17 +68,53 @@ function get_legacygl(gl, vertex_shader_src, fragment_shader_src) {
                 undefined;
             this.stack.pop();
         };
+        this.uniforms[name] = uniform;
+    };
+    legacygl.add_uniform_array = function(name, type, size) {
+        var uniform = {
+            location: gl.getUniformLocation(this.shader.program, "u_" + name),
+            type: type
+        };
+        function make_default_value() {
+            var default_value =
+                type == "1f" || type == "1i" ? 0 :
+                type == "2f" || type == "2i" ? vec2.create() :
+                type == "3f" || type == "3i" ? vec3.create() :
+                type == "4f" || type == "4i" ? vec4.create() :
+                type == "Matrix2f" ? mat2.create() :
+                type == "Matrix3f" ? mat3.create() :
+                type == "Matrix4f" ? mat4.create() :
+                undefined;
+            return default_value;
+        };
+        uniform.value = [];
+        for (var i = 0; i < size; ++i)
+            uniform.value.push(make_default_value());
+        // stack push/pop unsupported for now
+        this.uniforms[name] = uniform;
     };
     legacygl.set_uniforms = function() {
         for (var name in this.uniforms) {
-            var type = this.uniforms[name].type;
+            var uniform = this.uniforms[name];
+            var type = uniform.type;
+            var is_array = Array.isArray(uniform.value);
+            // in case of array type, flatten values
+            var flattened_values = [];
+            if (is_array) {
+                uniform.value.forEach(function(v){
+                    for (var i = 0; i < v.length; ++i)
+                        flattened_values.push(v[i]);
+                });
+            }
+            var passed_value = is_array ? flattened_values : uniform.value;
+            // call appropriate WebGL function depending on data type
             var func_name = "uniform" + type;
-            if (type != "1f" && type != "1i")
+            if (is_array || type != "1f" && type != "1i")
                 func_name += "v";
-            if (type == "Matrix2f" || type == "Matrix3f" || type == "Matrix4f")
-                gl[func_name](this.uniforms[name].location, false, this.uniforms[name].value);
-            else
-                gl[func_name](this.uniforms[name].location, this.uniforms[name].value);
+            if (type == "Matrix2f" || type == "Matrix3f" || type == "Matrix4f") {
+                gl[func_name](uniform.location, false, passed_value);
+            } else
+                gl[func_name](uniform.location, passed_value);
         }
     };
     
