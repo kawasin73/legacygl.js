@@ -31,7 +31,8 @@ function get_legacygl(gl, vertex_shader_src, fragment_shader_src) {
     legacygl.add_uniform = function(name, type) {
         var uniform = {
             location: gl.getUniformLocation(this.shader.program, "u_" + name),
-            type: type
+            type: type,
+            is_array: false
         };
         uniform.value =
             type == "1f" || type == "1i" ? 0 :
@@ -73,7 +74,8 @@ function get_legacygl(gl, vertex_shader_src, fragment_shader_src) {
     legacygl.add_uniform_array = function(name, type, size) {
         var uniform = {
             location: gl.getUniformLocation(this.shader.program, "u_" + name),
-            type: type
+            type: type,
+            is_array: true
         };
         function make_default_value() {
             var default_value =
@@ -97,19 +99,20 @@ function get_legacygl(gl, vertex_shader_src, fragment_shader_src) {
         for (var name in this.uniforms) {
             var uniform = this.uniforms[name];
             var type = uniform.type;
-            var is_array = Array.isArray(uniform.value);
             // in case of array type, flatten values
-            var flattened_values = [];
-            if (is_array) {
+            var passed_value;
+            if (uniform.is_array) {
+                passed_value = [];
                 uniform.value.forEach(function(v){
                     for (var i = 0; i < v.length; ++i)
-                        flattened_values.push(v[i]);
+                        passed_value.push(v[i]);
                 });
+            } else {
+                passed_value = uniform.value;
             }
-            var passed_value = is_array ? flattened_values : uniform.value;
             // call appropriate WebGL function depending on data type
             var func_name = "uniform" + type;
-            if (is_array || type != "1f" && type != "1i")
+            if (uniform.is_array || type != "1f" && type != "1i")
                 func_name += "v";
             if (type == "Matrix2f" || type == "Matrix3f" || type == "Matrix4f") {
                 gl[func_name](uniform.location, false, passed_value);

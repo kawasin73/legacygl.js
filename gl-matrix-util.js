@@ -56,7 +56,7 @@ vec2.transformMat2d_ip = function(a, m) { return vec2.transformMat2d(a, a, m); }
 vec2.transformMat3_ip = function(a, m) { return vec2.transformMat3(a, a, m); };
 vec2.transformMat4_ip = function(a, m) { return vec2.transformMat4(a, a, m); };
 
-// vec4 in-place versions
+// vec3 in-place versions
 vec3.add_ip = function(a, b) { return vec3.add(a, a, b); };
 vec3.cross_ip = function(a, b) { return vec3.cross(a, a, b); };
 vec3.div_ip = function(a, b) { return vec3.div(a, a, b); };
@@ -94,3 +94,17 @@ vec4.subtract_ip = function(a, b) { return vec4.subtract(a, a, b); };
 vec4.transformMat4_ip = function(a, m) { return vec4.transformMat4(a, a, m); };
 vec4.transformQuat_ip = function(a, q) { return vec4.transformQuat(a, a, q); };
 
+// quat in-place versions
+quat.add_ip = function(a, b) { return quat.add(a, a, b); };
+quat.calculateW_ip = function(a) { return quat.calculateW(a, a); };
+quat.conjugate_ip = function(a) { return quat.conjugate(a, a); };
+quat.invert_ip = function(a) { return quat.invert(a, a); };
+quat.lerp_ip = function(a, b, t) { return quat.lerp(a, a, b, t); };
+quat.mul_ip = function(a, b) { return quat.mul(a, a, b); };
+quat.multiply_ip = function(a, b) { return quat.multiply(a, a, b); };
+quat.normalize_ip = function(a) { return quat.normalize(a, a); };
+quat.rotateX_ip = function(a, rad) { return quat.rotateX(a, a, rad); };
+quat.rotateY_ip = function(a, rad) { return quat.rotateY(a, a, rad); };
+quat.rotateZ_ip = function(a, rad) { return quat.rotateZ(a, a, rad); };
+quat.scale_ip = function(a, b) { return quat.scale(a, a, b); };
+quat.slerp_ip = function(a, b, t) { return quat.slerp(a, a, b, t); };
