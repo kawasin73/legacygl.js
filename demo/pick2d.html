@@ -107,10 +107,10 @@ function init() {
         var viewport = [0, 0, canvas.width, canvas.height];
         var dist_min = 10000000;
         for (var i = 0; i < objects.length; ++i) {
-            var object_win = project(objects[i].position, 
-                                     legacygl.uniforms.modelview.value,
-                                     legacygl.uniforms.projection.value,
-                                     viewport);
+            var object_win = glu.project(objects[i].position, 
+                                         legacygl.uniforms.modelview.value,
+                                         legacygl.uniforms.projection.value,
+                                         viewport);
             var dist = vec2.dist(mouse_win, object_win);
             if (dist < dist_min && dist < 20) {
                 dist_min = dist;
@@ -133,10 +133,10 @@ function init() {
         if (is_translating) {
             var viewport = [0, 0, canvas.width, canvas.height];
             mouse_win.push(1);
-            var mouse_obj = unproject(mouse_win, 
-                                      legacygl.uniforms.modelview.value,
-                                      legacygl.uniforms.projection.value,
-                                      viewport);
+            var mouse_obj = glu.unproject(mouse_win, 
+                                          legacygl.uniforms.modelview.value,
+                                          legacygl.uniforms.projection.value,
+                                          viewport);
             // just reuse the same code as the 3D case
             var plane_origin = [0, 0, 0];
             var plane_normal = [0, 0, 1];

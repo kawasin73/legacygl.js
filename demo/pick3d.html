@@ -95,10 +95,10 @@ function init() {
         var candidates = [];
         var viewport = [0, 0, canvas.width, canvas.height];
         for (var i = 0; i < objects.length; ++i) {
-            var object_win = project(objects[i].position, 
-                                     legacygl.uniforms.modelview.value,
-                                     legacygl.uniforms.projection.value,
-                                     viewport);
+            var object_win = glu.project(objects[i].position, 
+                                         legacygl.uniforms.modelview.value,
+                                         legacygl.uniforms.projection.value,
+                                         viewport);
             if (vec2.dist(mouse_win, object_win) < 20)
                 candidates.push({ dist: vec3.dist(camera.eye, objects[i].position), index:i });
         }
@@ -123,10 +123,10 @@ function init() {
         if (is_translating) {
             var viewport = [0, 0, canvas.width, canvas.height];
             mouse_win.push(1);
-            var mouse_obj = unproject(mouse_win, 
-                                      legacygl.uniforms.modelview.value,
-                                      legacygl.uniforms.projection.value,
-                                      viewport);
+            var mouse_obj = glu.unproject(mouse_win, 
+                                          legacygl.uniforms.modelview.value,
+                                          legacygl.uniforms.projection.value,
+                                          viewport);
             var eye_to_mouse = vec3.sub([], mouse_obj, camera.eye);
             var eye_to_origin = vec3.sub([], plane_origin, camera.eye);
             var s1 = vec3.dot(eye_to_mouse, plane_normal);
