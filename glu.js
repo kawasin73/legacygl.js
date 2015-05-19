@@ -1,6 +1,8 @@
 "use strict";
 
-function project(obj_xyz, modelview, projection, viewport) {
+var glu = {};
+
+glu.project = function(obj_xyz, modelview, projection, viewport) {
     // object coordinate to normalized decive coordinate
     var m = mat4.mul([], projection, modelview);
     var ndc = vec4.transformMat4([], [obj_xyz[0], obj_xyz[1], obj_xyz[2], 1], m);
@@ -12,7 +14,7 @@ function project(obj_xyz, modelview, projection, viewport) {
     return [win_x, win_y, win_z];
 };
 
-function unproject(win_xyz, modelview, projection, viewport) {
+glu.unproject = function(win_xyz, modelview, projection, viewport) {
     // viewport coordinate to normalized device coordinate
     var ndc_x = (win_xyz[0] - viewport[0]) * 2 / viewport[2] - 1;
     var ndc_y = (win_xyz[1] - viewport[1]) * 2 / viewport[3] - 1;
