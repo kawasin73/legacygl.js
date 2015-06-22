@@ -27,3 +27,6 @@ glu.unproject = function(win_xyz, modelview, projection, viewport) {
     vec4.scale_ip(obj_xyzw, 1 / obj_xyzw[3]);
     return [obj_xyzw[0], obj_xyzw[1], obj_xyzw[2]];
 };
+glu.ortho2D = function (out, left, right, bottom, top) {
+    return mat4.ortho(out, left, right, bottom, top, -1, 1);
+};
