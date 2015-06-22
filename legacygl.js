@@ -103,10 +103,11 @@ function get_legacygl(gl, vertex_shader_src, fragment_shader_src) {
             var passed_value;
             if (uniform.is_array) {
                 passed_value = [];
-                uniform.value.forEach(function(v){
-                    for (var i = 0; i < v.length; ++i)
-                        passed_value.push(v[i]);
-                });
+                for (var i = 0; i < uniform.value.length; ++i) {
+                    var v = uniform.value[i];
+                    for (var j = 0; j < v.length; ++j)
+                        passed_value.push(v[j]);
+                }
             } else {
                 passed_value = uniform.value;
             }
@@ -144,11 +145,12 @@ function get_legacygl(gl, vertex_shader_src, fragment_shader_src) {
     legacygl.add_vertex_attribute("vertex", 3);
     delete legacygl.vertex_attributes[0].current;
     legacygl.vertex = function(x, y, z) {
-        this.vertex_attributes.forEach(function(vertex_attribute) {
+        for (var i = 0; i < this.vertex_attributes.length; ++i) {
+            var vertex_attribute = this.vertex_attributes[i];
             var value = vertex_attribute.name == "vertex" ? [x, y, z] : vertex_attribute.current;
-            for (var i = 0; i < vertex_attribute.size; ++i)
-                vertex_attribute.array.push(value[i]);
-        });
+            for (var j = 0; j < vertex_attribute.size; ++j)
+                vertex_attribute.array.push(value[j]);
+        }
         // emulate GL_QUADS
         var num_vertices = this.vertex_attributes[0].array.length / 3;
         if (this.mode == this.QUADS && num_vertices % 6 == 4) {         // 6 vertices per quad (= 2 triangles)
@@ -157,10 +159,11 @@ function get_legacygl(gl, vertex_shader_src, fragment_shader_src) {
             for (var k = 0; k < 3; ++k) {
                 if (k == 1)
                     continue;
-                this.vertex_attributes.forEach(function(vertex_attribute) {
-                    for (var i = 0; i < vertex_attribute.size; ++i)
-                        vertex_attribute.array.push(vertex_attribute.array[vertex_attribute.size * (v0 + k) + i]);
-                });
+                for (var i = 0; i < this.vertex_attributes.length; ++i) {
+                    var vertex_attribute = this.vertex_attributes[i];
+                    for (var j = 0; j < vertex_attribute.size; ++j)
+                        vertex_attribute.array.push(vertex_attribute.array[vertex_attribute.size * (v0 + k) + j]);
+                }
             }
         }
     };
@@ -168,9 +171,9 @@ function get_legacygl(gl, vertex_shader_src, fragment_shader_src) {
     legacygl.begin = function(mode) {
         this.set_uniforms();
         this.mode = mode;
-        this.vertex_attributes.forEach(function(vertex_attribute) {
-            vertex_attribute.array = [];
-        });
+        for (var i = 0; i < this.vertex_attributes.length; ++i) {
+            this.vertex_attributes[i].array = [];
+        }
     };
     legacygl.end = function() {
         var drawcall = {
@@ -178,7 +181,8 @@ function get_legacygl(gl, vertex_shader_src, fragment_shader_src) {
             mode         : this.mode == this.QUADS ? gl.TRIANGLES : this.mode,
             num_vertices : this.vertex_attributes[0].array.length / 3,
         };
-        this.vertex_attributes.forEach(function(vertex_attribute) {
+        for (var k = 0; k < this.vertex_attributes.length; ++k) {
+            var vertex_attribute = this.vertex_attributes[k];
             var buffer = gl.createBuffer();
             gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
             drawcall.buffers.push(buffer);
@@ -200,15 +204,15 @@ function get_legacygl(gl, vertex_shader_src, fragment_shader_src) {
             }
             gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertex_attribute.array), gl.STATIC_DRAW);
             gl.vertexAttribPointer(vertex_attribute.location, vertex_attribute.size, gl.FLOAT, false, 0, 0);
-        });
+        }
         gl.drawArrays(drawcall.mode, 0, drawcall.num_vertices);
         // display list
         if (this.current_displist_name)
             this.displists[this.current_displist_name].drawcalls.push(drawcall);
         else
-            drawcall.buffers.forEach(function(buffer){
-                gl.deleteBuffer(buffer);
-            });
+            for (var i = 0; i < drawcall.buffers.length; ++i) {
+                gl.deleteBuffer(drawcall.buffers[i]);
+            }
     };
     // emulate GL_QUADS
     legacygl.QUADS = "QUADS";
@@ -219,11 +223,12 @@ function get_legacygl(gl, vertex_shader_src, fragment_shader_src) {
         var displist = this.displists[name];
         if (displist) {
             // delete existing buffers
-            displist.drawcalls.forEach(function(drawcall){
-                drawcall.buffers.forEach(function(buffer){
-                    gl.deleteBuffer(buffer);
-                });
-            });
+            for (var i = 0; i < displist.drawcalls.length; ++i) {
+                var drawcall = displist.drawcalls[i];
+                for (var j = 0; j < drawcall.buffers.length; ++j) {
+                    gl.deleteBuffer(drawcall.buffers[j]);
+                }
+            }
             displist.drawcalls = [];
         } else {
             this.displists[name] = displist = {
@@ -241,13 +246,15 @@ function get_legacygl(gl, vertex_shader_src, fragment_shader_src) {
         if (!displist)
             return;
         this.set_uniforms();
-        displist.drawcalls.forEach(function(drawcall){
-            legacygl.vertex_attributes.forEach(function(vertex_attribute, i){
+        for (var k = 0; k < displist.drawcalls.length; ++k) {
+            var drawcall = displist.drawcalls[k];
+            for (var i = 0; i < this.vertex_attributes.length; ++i) {
+                var vertex_attribute = this.vertex_attributes[i];
                 gl.bindBuffer(gl.ARRAY_BUFFER, drawcall.buffers[i]);
                 gl.vertexAttribPointer(vertex_attribute.location, vertex_attribute.size, gl.FLOAT, false, 0, 0);
-            });
+            }
             gl.drawArrays(drawcall.mode, 0, drawcall.num_vertices);
-        });
+        }
     };
     // wrapper
     legacygl.displist_wrapper = function(name) {
