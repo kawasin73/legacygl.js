@@ -144,7 +144,7 @@ function get_legacygl(gl, vertex_shader_src, fragment_shader_src) {
     // special treatment for vertex position attribute
     legacygl.add_vertex_attribute("vertex", 3);
     delete legacygl.vertex_attributes[0].current;
-    legacygl.vertex = function(x, y, z) {
+    function vertex(x, y, z) {
         for (var i = 0; i < this.vertex_attributes.length; ++i) {
             var vertex_attribute = this.vertex_attributes[i];
             var value = vertex_attribute.name == "vertex" ? [x, y, z] : vertex_attribute.current;
@@ -167,6 +167,7 @@ function get_legacygl(gl, vertex_shader_src, fragment_shader_src) {
             }
         }
     };
+    legacygl.vertex = vertex;
     // begin and end
     legacygl.begin = function(mode) {
         this.set_uniforms();
