@@ -101,5 +101,17 @@ function get_drawutil(gl, legacygl) {
             ]
         );
     };
+    drawutil.circle = function(mode, size, numdiv) {
+        if (!numdiv) numdiv = 12;
+        var r = size / 2;
+        legacygl.begin(mode == "line" ? gl.LINE_LOOP : gl.TRIANGLE_FAN);
+        for (var i = 0; i < numdiv; ++i) {
+            var theta = i * 2 * Math.PI / numdiv;
+            var x = r * Math.cos(theta);
+            var y = r * Math.sin(theta);
+            legacygl.vertex(x, y, 0);
+        }
+        legacygl.end();
+    }
     return drawutil;
 };
