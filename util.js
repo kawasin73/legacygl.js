@@ -13,7 +13,7 @@ HTMLCanvasElement.prototype.get_mousepos = function(event, flip_y) {
     }
     var x = event.pageX - totalOffsetX;
     var y = event.pageY - totalOffsetY;
-    if (flip_y !== undefined && flip_y)         // flip y by default
+    if (flip_y === undefined || flip_y)         // flip y by default
         y = this.height - y;
     return [x, y];
 };
