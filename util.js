@@ -1,6 +1,6 @@
 "use strict";
 
-HTMLCanvasElement.prototype.get_mousepos = function(event) {
+HTMLCanvasElement.prototype.get_mousepos = function(event, flip_y) {
     var totalOffsetX = 0;
     var totalOffsetY = 0;
     for(var currentElement = this; currentElement; currentElement = currentElement.offsetParent) {
@@ -13,7 +13,9 @@ HTMLCanvasElement.prototype.get_mousepos = function(event) {
     }
     var x = event.pageX - totalOffsetX;
     var y = event.pageY - totalOffsetY;
-    return [x, this.height - y];
+    if (flip_y !== undefined && flip_y)         // flip y by default
+        y = this.height - y;
+    return [x, y];
 };
 HTMLCanvasElement.prototype.aspect_ratio = function() {
     return this.width / this.height;
