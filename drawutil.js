@@ -112,6 +112,37 @@ function get_drawutil(gl, legacygl) {
             legacygl.vertex(x, y, 0);
         }
         legacygl.end();
-    }
+    };
+    drawutil.sphere = function(mode, radius, slices, stacks) {
+        function angle2pos(theta, phi) {
+            var x = radius * Math.cos(theta) * Math.sin(phi);
+            var y = radius * Math.sin(theta) * Math.sin(phi);
+            var z = radius * Math.cos(phi);
+            return [x, y, z];
+        };
+        legacygl.begin(mode == "line" ? gl.LINES : legacygl.QUADS);
+        var phi = 0;
+        var dphi = Math.PI / stacks;
+        for (var i = 0; i < stacks; ++i, phi += dphi) {
+            var theta = 0;
+            var dtheta = 2 * Math.PI / slices;
+            for (var j = 0; j < slices; ++j, theta += dtheta) {
+                var p = [
+                    angle2pos(theta, phi),
+                    angle2pos(theta + dtheta, phi),
+                    angle2pos(theta + dtheta, phi + dphi),
+                    angle2pos(theta         , phi + dphi)
+                ];
+                for (var k = 0; k < 4; ++k) {
+                    legacygl.vertex(p[k][0], p[k][1], p[k][2]);
+                    if (mode == "line") {
+                        var k1 = (k + 1) % 4;
+                        legacygl.vertex(p[k1][0], p[k1][1], p[k1][2]);
+                    }
+                }
+            }
+        }
+        legacygl.end();
+    };
     return drawutil;
 };
