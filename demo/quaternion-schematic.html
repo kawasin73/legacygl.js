@@ -1,0 +1,239 @@
+<html>
+<head>
+<title>Schematic of axis-angle rotation using quaternion</title>
+<script src="../gl-matrix.js"></script>
+<script src="../gl-matrix-util.js"></script>
+<script src="../legacygl.js"></script>
+<script src="../drawutil.js"></script>
+<script src="../camera.js"></script>
+<script src="../util.js"></script>
+<script type="text/javascript">
+var gl;
+var canvas;
+var legacygl;
+var drawutil;
+var camera;
+
+function draw() {
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    // projection and camera position
+    mat4.perspective(legacygl.uniforms.projection.value, Math.PI / 6, canvas.aspect_ratio(), 0.1, 1000);
+    camera.lookAt(legacygl.uniforms.modelview.value);
+
+    // draw xy-grid spanning [-2,2]x[-2,2]
+    gl.lineWidth(1);
+    legacygl.color(0.95, 0.95, 0.9);
+    legacygl.uniforms.modelview.push();
+    mat4.scale_ip(legacygl.uniforms.modelview.value, [0.1, 0.1, 0.1]);
+    drawutil.xygrid(20);
+    legacygl.uniforms.modelview.pop();
+
+
+    // axis of rotation (Y axis)
+    legacygl.color(1, 0, 0);
+    gl.lineWidth(1);
+    legacygl.begin(gl.LINES);
+    legacygl.vertex(0, 0, -10);
+    legacygl.vertex(0, 0, 10);
+    legacygl.end();
+    gl.lineWidth(5);
+    legacygl.begin(gl.LINES);
+    legacygl.vertex(0, 0, 0);
+    legacygl.vertex(0, 0, 1);
+    legacygl.end();
+
+    // u-vector
+    legacygl.color(0, 0.5, 1);
+    gl.lineWidth(1);
+    legacygl.begin(gl.LINES);
+    legacygl.vertex(1.5, 0, 0);
+    legacygl.vertex(1.5, 0, 2);
+    legacygl.end();
+    gl.lineWidth(5);
+    legacygl.begin(gl.LINES);
+    legacygl.vertex(0, 0, 0);
+    legacygl.vertex(1.5, 0, 0);
+    legacygl.end();
+
+    // v-vector
+    legacygl.color(1, 0.5, 0);
+    gl.lineWidth(5);
+    legacygl.begin(gl.LINES);
+    legacygl.vertex(0, 0, 0);
+    legacygl.vertex(0, 1.5, 0);
+    legacygl.end();
+
+    // point x
+    legacygl.begin(gl.POINTS);
+    legacygl.color(0, 0, 0);
+    legacygl.vertex(1.5, 0, 2);
+    legacygl.end();
+    gl.lineWidth(1);
+    legacygl.begin(gl.LINES);
+    legacygl.vertex(0, 0, 0);
+    legacygl.vertex(1.5, 0, 2);
+    legacygl.end();
+
+    // point y
+    var theta = document.getElementById("angle").value * Math.PI / 180;
+    legacygl.color(0, 0, 0);
+    legacygl.begin(gl.POINTS);
+    legacygl.vertex(1.5*Math.cos(theta), 1.5*Math.sin(theta), 2);
+    legacygl.end();
+    legacygl.begin(gl.LINES);
+    legacygl.vertex(0, 0, 0);
+    legacygl.vertex(1.5*Math.cos(theta), 1.5*Math.sin(theta), 2);
+    legacygl.color(0, 0, 0);
+    legacygl.end();
+    // faint auxiliary line
+    legacygl.color(0.7, 0.7, 0.7);
+    legacygl.begin(gl.LINE_STRIP);
+    legacygl.vertex(0, 0, 0);
+    legacygl.vertex(1.5*Math.cos(theta), 1.5*Math.sin(theta), 0);
+    legacygl.vertex(1.5*Math.cos(theta), 1.5*Math.sin(theta), 2);
+    legacygl.end();
+
+    // arcs
+    legacygl.begin(gl.LINES);
+    for (var i = 0; i < 50; ++i) {
+        var t0 = Math.PI * 0.5 * i / 50;
+        var t1 = Math.PI * 0.5 * (i+1) / 50;
+        legacygl.vertex(1.5*Math.cos(t0), 1.5*Math.sin(t0), 0);
+        legacygl.vertex(1.5*Math.cos(t1), 1.5*Math.sin(t1), 0);
+        legacygl.vertex(1.5*Math.cos(t0), 1.5*Math.sin(t0), 2);
+        legacygl.vertex(1.5*Math.cos(t1), 1.5*Math.sin(t1), 2);
+    }
+    legacygl.end();
+    legacygl.begin(gl.LINE_STRIP);
+    legacygl.vertex(1.5, 0, 2);
+    legacygl.vertex(0, 0, 2);
+    legacygl.vertex(0, 1.5, 2);
+    legacygl.vertex(0, 1.5, 0);
+    legacygl.end();
+
+    // reflection plane by f
+    if (document.getElementById("show_plane_f").checked) {
+        legacygl.color(1, 0.5, 0);
+        gl.lineWidth(1);
+        legacygl.begin(gl.LINES);
+        for (var z = -0.2; z < 2.2; z += 0.027) {
+            legacygl.vertex(-0.2, 0, z);
+            legacygl.vertex(1.7, 0, z);
+        }
+        legacygl.end();
+        gl.lineWidth(2);
+        legacygl.begin(gl.LINE_LOOP);
+        legacygl.vertex(-0.2, 0, -0.2);
+        legacygl.vertex(1.7, 0, -0.2);
+        legacygl.vertex(1.7, 0, 2.2);
+        legacygl.vertex(-0.2, 0, 2.2);
+        legacygl.end();
+    }
+
+    // reflection plane by g
+    if (document.getElementById("show_plane_g").checked) {
+        legacygl.uniforms.modelview.push();
+        mat4.rotateZ_ip(legacygl.uniforms.modelview.value, theta / 2);
+        // v-vector
+        legacygl.color(0, 0.5, 0);
+        gl.lineWidth(5);
+        legacygl.begin(gl.LINES);
+        legacygl.vertex(0, 0, 0);
+        legacygl.vertex(0, 1.5, 0);
+        legacygl.end();
+        gl.lineWidth(1);
+        legacygl.begin(gl.LINES);
+        for (var z = -0.2; z < 2.2; z += 0.027) {
+            legacygl.vertex(-0.2, 0, z);
+            legacygl.vertex(1.7, 0, z);
+        }
+        legacygl.end();
+        gl.lineWidth(2);
+        legacygl.begin(gl.LINE_LOOP);
+        legacygl.vertex(-0.2, 0, -0.2);
+        legacygl.vertex(1.7, 0, -0.2);
+        legacygl.vertex(1.7, 0, 2.2);
+        legacygl.vertex(-0.2, 0, 2.2);
+        legacygl.end();
+        legacygl.uniforms.modelview.pop();
+    }
+};
+function init() {
+    // OpenGL context
+    canvas = document.getElementById("canvas");
+    gl = canvas.getContext("experimental-webgl");
+    if (!gl)
+        alert("Could not initialize WebGL!");
+    console.log("ALIASED_LINE_WIDTH_RANGE", gl.getParameter(gl.ALIASED_LINE_WIDTH_RANGE));
+    console.log("ALIASED_POINT_SIZE_RANGE", gl.getParameter(gl.ALIASED_POINT_SIZE_RANGE));
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    var vertex_shader_src = "\
+        attribute vec3 a_vertex;\
+        attribute vec3 a_color;\
+        varying vec3 v_color;\
+        uniform mat4 u_modelview;\
+        uniform mat4 u_projection;\
+        void main(void) {\
+            gl_Position = u_projection * u_modelview * vec4(a_vertex, 1.0);\
+            v_color = a_color;\
+            gl_PointSize = 5.0;\
+        }\
+        ";
+    var fragment_shader_src = "\
+        precision mediump float;\
+        varying vec3 v_color;\
+        void main(void) {\
+            gl_FragColor = vec4(v_color, 1.0);\
+        }\
+        ";
+    legacygl = get_legacygl(gl, vertex_shader_src, fragment_shader_src);
+    legacygl.add_uniform("modelview", "Matrix4f");
+    legacygl.add_uniform("projection", "Matrix4f");
+    legacygl.add_vertex_attribute("color", 3);
+    drawutil = get_drawutil(gl, legacygl);
+    camera = get_camera(canvas.width);
+    camera.up = [0, 0, 1];
+    camera.eye = [-1.5, -4.5, 4.5];
+    camera.center = [0.5, 0.5, 1.2];
+    // event handlers
+    canvas.onmousedown = function(evt) {
+        camera.start_moving(this.get_mousepos(evt), evt.shiftKey ? "zoom" : evt.ctrlKey ? "pan" : "rotate");
+    };
+    canvas.onmousemove = function(evt) {
+        if (camera.is_moving()) {
+            camera.move(this.get_mousepos(evt));
+            draw();
+        }
+    };
+    document.onmouseup = function(evt) {
+        if (camera.is_moving())
+            camera.finish_moving();
+    };
+    document.getElementById("angle").onchange = 
+    document.getElementById("show_plane_f").onchange =
+    document.getElementById("show_plane_g").onchange =
+        function() { draw(); };
+    // init OpenGL settings
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.enable(gl.DEPTH_TEST);
+    gl.clearColor(1, 1, 1, 1);
+};
+</script>
+</head>
+<body onload="init(); draw();">
+    <h2>Schematic of axis-angle rotation using quaternion</h2>
+    <canvas id="canvas" width="640" height="480" style="border:1px solid #000000;"></canvas>
+    <table>
+    <tr><td>Angle in degree:</td><td> <input type="number" id="angle" value="60"/></td></tr>
+    <tr><td>Show reflection plane by f:</td><td><input type="checkbox" id="show_plane_f"/></td></tr>
+    <tr><td>Show reflection plane by g:</td><td><input type="checkbox" id="show_plane_g"/></td></tr>
+    </table>
+    <h3>Camera Control:</h3>
+    <ul>
+        <li>Drag: Rotate</li>
+        <li>Shift+Drag: Zoom</li>
+        <li>Ctrl+Drag: Pan</li>
+    </ul>
+</body>
+</html>
