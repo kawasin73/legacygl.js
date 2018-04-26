@@ -189,7 +189,7 @@ function get_legacygl(gl, vertex_shader_src, fragment_shader_src) {
             drawcall.buffers.push(buffer);
             // simulate GL_AUTO_NORMAL
             if (drawcall.mode == gl.TRIANGLES && vertex_attribute.name == "normal" && legacygl.flags.AUTO_NORMAL) {
-                for (var i = 0; i < num_vertices / 3; ++i) {
+                for (var i = 0; i < drawcall.num_vertices / 3; ++i) {
                     var v = [];
                     for (var j = 0; j < 3; ++j) {
                         var slicepos = 3 * (3 * i + j);
