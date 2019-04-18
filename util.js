@@ -21,7 +21,7 @@ HTMLCanvasElement.prototype.aspect_ratio = function() {
     return this.width / this.height;
 };
 function verify_filename_extension(filename, supported_extensions) {
-    var given_extension = filename.toLowerCase().slice(-4);
+    var given_extension = filename.split(/\#|\?/)[0].split('.').pop().trim();   // https://stackoverflow.com/a/47767860
     if (supported_extensions.some(function (x) { return x == given_extension; }))
         return given_extension;
     alert("Supported formats are: " + supported_extensions);
