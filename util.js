@@ -20,8 +20,11 @@ HTMLCanvasElement.prototype.get_mousepos = function(event, flip_y) {
 HTMLCanvasElement.prototype.aspect_ratio = function() {
     return this.width / this.height;
 };
+function get_filename_extension(filename) {
+    return "." + filename.toLowerCase().split(/\#|\?/)[0].split('.').pop().trim();   // https://stackoverflow.com/a/47767860
+}
 function verify_filename_extension(filename, supported_extensions) {
-    var given_extension = "." + filename.split(/\#|\?/)[0].split('.').pop().trim();   // https://stackoverflow.com/a/47767860
+    var given_extension = get_filename_extension(filename);
     if (supported_extensions.some(function (x) { return x == given_extension; }))
         return given_extension;
     alert("Supported formats are: " + supported_extensions);

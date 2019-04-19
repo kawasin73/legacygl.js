@@ -73,7 +73,7 @@ meshio.read_off = function(file_content) {
     return mesh;
 };
 meshio.read = function(filename, content) {
-    var file_extension = filename.toLowerCase().slice(-4);
+    var file_extension = get_filename_extension(filename);
     if (file_extension == ".obj")
         return this.read_obj(content);
     if (file_extension == ".off")
@@ -117,7 +117,7 @@ meshio.write_off = function(mesh) {
     return lines.join("\n");
 };
 meshio.write = function(mesh, filename) {
-    var file_extension = filename.toLowerCase().slice(-4);
+    var file_extension = get_filename_extension(filename);
     if (file_extension == ".obj")
         return this.write_obj(mesh);
     if (file_extension == ".off")
